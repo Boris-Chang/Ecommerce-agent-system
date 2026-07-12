@@ -1,0 +1,93 @@
+{
+  "draft_id": "shopify_product_page_draft_20260616_151951",
+  "data": {
+    "current_product_snapshot": {
+      "product_id": "gid://shopify/Product/8453308383402",
+      "current_title": "Baroque Pearl Fan Earrings",
+      "handle": "baroque-pearl-fan-earrings",
+      "status": "ACTIVE",
+      "total_inventory": 1000,
+      "price_range": "49.39"
+    },
+    "diagnosis": {
+      "main_issues": [
+        {
+          "issue_type": "missing_seo_title",
+          "priority": "medium",
+          "explanation": "SEO title is empty, which weakens search result relevance and click-through potential."
+        },
+        {
+          "issue_type": "missing_seo_description",
+          "priority": "medium",
+          "explanation": "SEO description is empty, so the product page lacks a controlled search snippet."
+        },
+        {
+          "issue_type": "missing_tags",
+          "priority": "low",
+          "explanation": "No product tags were found. Tags can support collection rules, search, and merchandising workflows."
+        }
+      ],
+      "overall_assessment": "Baroque Pearl Fan Earrings has a clear product concept, but the page should improve SEO fields, conversion-focused copy, and merchandising details before scaling traffic."
+    },
+    "title_options": [
+      {
+        "title": "Baroque Pearl Fan Earrings | Earrings by Jiyuan Chang",
+        "rationale": "Keeps the current product name while adding product type and brand context."
+      },
+      {
+        "title": "Baroque Pearl Fan Earrings - Earrings for Everyday Styling",
+        "rationale": "Adds use-case language to make the title more search and conversion friendly."
+      },
+      {
+        "title": "Jiyuan Chang Baroque Pearl Fan Earrings",
+        "rationale": "Leads with the vendor name for brand-led merchandising."
+      }
+    ],
+    "recommended_title": "Baroque Pearl Fan Earrings | Earrings by Jiyuan Chang",
+    "hero_bullets": [
+      "Designed as a earrings with a distinctive visual style.",
+      "Easy to position for gifting, occasion styling, or everyday outfits.",
+      "Review imagery, sizing, materials, and care details before publishing final copy."
+    ],
+    "product_description_markdown": "### Baroque Pearl Fan Earrings | Earrings by Jiyuan Chang\n\nBaroque Pearl Fan Earrings is a polished earrings designed for shoppers looking for a distinctive accessory. Use this page to clearly explain the material, size, styling scenarios, and what makes the product feel special.\n\n#### Why shoppers may like it\n- Distinctive look suitable for outfit styling\n- Strong gifting potential\n- Clear room for stronger SEO and product storytelling\n\n#### Suggested next edits\n- Add exact material and dimensions\n- Add care instructions\n- Add occasion-based styling notes\n- Add shipping and return reassurance near the buy button\n",
+    "seo": {
+      "seo_title": "Baroque Pearl Fan Earrings | Earrings by Jiyuan Chang",
+      "seo_description": "Shop Baroque Pearl Fan Earrings, a earrings from Jiyuan Chang. Review style details, materials, inventory, and product page copy before publishing."
+    },
+    "faq": [
+      {
+        "question": "What occasions is this product best for?",
+        "answer": "Position it for everyday styling, gifting, and occasion outfits after confirming the exact product materials and dimensions."
+      },
+      {
+        "question": "What details should be added before publishing?",
+        "answer": "Add material, size, care instructions, shipping reassurance, and clearer lifestyle use cases."
+      }
+    ],
+    "ad_angles": [
+      {
+        "angle": "Style upgrade",
+        "hook": "Make your outfit feel more finished with Baroque Pearl Fan Earrings.",
+        "reason": "Accessory shoppers often respond to simple styling transformation messages."
+      },
+      {
+        "angle": "Gift-ready accessory",
+        "hook": "A thoughtful accessory pick for someone with a distinctive style.",
+        "reason": "Gifting language can broaden the product page and ad audience."
+      }
+    ],
+    "bundle_suggestions": [
+      {
+        "bundle_idea": "Pair Baroque Pearl Fan Earrings with complementary accessories or apparel.",
+        "reason": "Bundles can increase average order value when the pairing feels style-led."
+      }
+    ],
+    "manual_review_checklist": [
+      "Verify material, dimensions, weight, and care instructions.",
+      "Confirm price and compare-at price strategy.",
+      "Add SEO title and SEO description in Shopify.",
+      "Check product images for close-up, lifestyle, and scale references.",
+      "Review final copy manually before publishing."
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+[project]
+name = "python-langchain-agent"
+version = "0.1.0"
+description = "A Shopify store operations assistant built with Python and LangChain."
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.28",
+    "langchain>=1.0",
+    "langchain-deepseek>=1.0",
+    "langchain-openai>=1.0",
+    "python-dotenv>=1.0",
+    "requests>=2.34",
+    "tzdata>=2025.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+shopify-agent = "agent_app.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,53 @@
+{
+  "report_id": "shopify_diagnosis_20260614_185115",
+  "report": {
+    "report_meta": {
+      "product_limit": 1,
+      "order_limit": 1,
+      "low_inventory_threshold": 5
+    },
+    "summary": {
+      "checked_product_count": 1,
+      "recent_order_count": 0,
+      "estimated_revenue": 0.0,
+      "currency": null,
+      "products_with_issues_count": 1,
+      "high_priority_issue_count": 0,
+      "medium_priority_issue_count": 3,
+      "low_priority_issue_count": 0
+    },
+    "top_selling_products": [],
+    "product_reports": [
+      {
+        "id": "gid://shopify/Product/8453307924650",
+        "title": "Handmade Straw Crossbody Bag",
+        "handle": "handmade-straw-crossbody-bag",
+        "status": "ACTIVE",
+        "product_type": "bag",
+        "vendor": "Jiyuan Chang",
+        "total_inventory": 4000,
+        "has_recent_sales": false,
+        "issues": [
+          {
+            "issue_type": "missing_seo_title",
+            "priority": "medium",
+            "evidence": "SEO title 为空。",
+            "recommendation": "补充包含品类关键词和核心卖点的 SEO title。"
+          },
+          {
+            "issue_type": "missing_seo_description",
+            "priority": "medium",
+            "evidence": "SEO description 为空。",
+            "recommendation": "补充简洁的 SEO description，突出购买理由。"
+          },
+          {
+            "issue_type": "has_inventory_but_no_recent_sales",
+            "priority": "medium",
+            "evidence": "该商品有库存，但最近 1 个订单中未出现。",
+            "recommendation": "建议检查商品页吸引力、价格、广告入口或是否适合做 bundle。"
+          }
+        ]
+      }
+    ]
+  }
+}

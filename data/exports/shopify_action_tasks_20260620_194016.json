@@ -1,0 +1,254 @@
+{
+  "action_tasks_id": "shopify_action_tasks_20260620_194016",
+  "data": {
+    "summary": {
+      "checked_product_count": 7,
+      "recent_order_count": 0,
+      "estimated_revenue": 0.0,
+      "currency": null,
+      "products_with_issues_count": 7,
+      "high_priority_issue_count": 0,
+      "medium_priority_issue_count": 21,
+      "low_priority_issue_count": 0
+    },
+    "task_count": 21,
+    "tasks": [
+      {
+        "product_id": "gid://shopify/Product/8453307924650",
+        "product_title": "Handmade Straw Crossbody Bag",
+        "handle": "handmade-straw-crossbody-bag",
+        "task_type": "product_page_optimization",
+        "priority": "medium",
+        "issue_type": "missing_seo_title",
+        "evidence": "SEO title 为空。",
+        "suggested_action": "补充包含品类关键词和核心卖点的 SEO title。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453307924650",
+        "product_title": "Handmade Straw Crossbody Bag",
+        "handle": "handmade-straw-crossbody-bag",
+        "task_type": "product_page_optimization",
+        "priority": "medium",
+        "issue_type": "missing_seo_description",
+        "evidence": "SEO description 为空。",
+        "suggested_action": "补充简洁的 SEO description，突出购买理由。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453307924650",
+        "product_title": "Handmade Straw Crossbody Bag",
+        "handle": "handmade-straw-crossbody-bag",
+        "task_type": "conversion_review",
+        "priority": "medium",
+        "issue_type": "has_inventory_but_no_recent_sales",
+        "evidence": "该商品有库存，但最近 10 个订单中未出现。",
+        "suggested_action": "建议检查商品页吸引力、价格、广告入口，或评估是否适合做 bundle。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308055722",
+        "product_title": "Woven Cut Out Tote Bag",
+        "handle": "woven-cut-out-tote-bag",
+        "task_type": "product_page_optimization",
+        "priority": "medium",
+        "issue_type": "missing_seo_title",
+        "evidence": "SEO title 为空。",
+        "suggested_action": "补充包含品类关键词和核心卖点的 SEO title。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308055722",
+        "product_title": "Woven Cut Out Tote Bag",
+        "handle": "woven-cut-out-tote-bag",
+        "task_type": "product_page_optimization",
+        "priority": "medium",
+        "issue_type": "missing_seo_description",
+        "evidence": "SEO description 为空。",
+        "suggested_action": "补充简洁的 SEO description，突出购买理由。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308055722",
+        "product_title": "Woven Cut Out Tote Bag",
+        "handle": "woven-cut-out-tote-bag",
+        "task_type": "conversion_review",
+        "priority": "medium",
+        "issue_type": "has_inventory_but_no_recent_sales",
+        "evidence": "该商品有库存，但最近 10 个订单中未出现。",
+        "suggested_action": "建议检查商品页吸引力、价格、广告入口，或评估是否适合做 bundle。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308088490",
+        "product_title": "Retro Straw Crossbody Bag for Women",
+        "handle": "retro-straw-crossbody-bag-for-women",
+        "task_type": "product_page_optimization",
+        "priority": "medium",
+        "issue_type": "missing_seo_title",
+        "evidence": "SEO title 为空。",
+        "suggested_action": "补充包含品类关键词和核心卖点的 SEO title。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308088490",
+        "product_title": "Retro Straw Crossbody Bag for Women",
+        "handle": "retro-straw-crossbody-bag-for-women",
+        "task_type": "product_page_optimization",
+        "priority": "medium",
+        "issue_type": "missing_seo_description",
+        "evidence": "SEO description 为空。",
+        "suggested_action": "补充简洁的 SEO description，突出购买理由。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308088490",
+        "product_title": "Retro Straw Crossbody Bag for Women",
+        "handle": "retro-straw-crossbody-bag-for-women",
+        "task_type": "conversion_review",
+        "priority": "medium",
+        "issue_type": "has_inventory_but_no_recent_sales",
+        "evidence": "该商品有库存，但最近 10 个订单中未出现。",
+        "suggested_action": "建议检查商品页吸引力、价格、广告入口，或评估是否适合做 bundle。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308154026",
+        "product_title": "Woven Straw Crossbody Bag with Drawstring Closure",
+        "handle": "woven-straw-crossbody-bag-with-drawstring-closure",
+        "task_type": "product_page_optimization",
+        "priority": "medium",
+        "issue_type": "missing_seo_title",
+        "evidence": "SEO title 为空。",
+        "suggested_action": "补充包含品类关键词和核心卖点的 SEO title。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308154026",
+        "product_title": "Woven Straw Crossbody Bag with Drawstring Closure",
+        "handle": "woven-straw-crossbody-bag-with-drawstring-closure",
+        "task_type": "product_page_optimization",
+        "priority": "medium",
+        "issue_type": "missing_seo_description",
+        "evidence": "SEO description 为空。",
+        "suggested_action": "补充简洁的 SEO description，突出购买理由。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308154026",
+        "product_title": "Woven Straw Crossbody Bag with Drawstring Closure",
+        "handle": "woven-straw-crossbody-bag-with-drawstring-closure",
+        "task_type": "conversion_review",
+        "priority": "medium",
+        "issue_type": "has_inventory_but_no_recent_sales",
+        "evidence": "该商品有库存，但最近 10 个订单中未出现。",
+        "suggested_action": "建议检查商品页吸引力、价格、广告入口，或评估是否适合做 bundle。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308285098",
+        "product_title": "Vintage Lapis Lazuli Pearl Earrings",
+        "handle": "vintage-lapis-lazuli-pearl-earrings",
+        "task_type": "product_page_optimization",
+        "priority": "medium",
+        "issue_type": "missing_seo_title",
+        "evidence": "SEO title 为空。",
+        "suggested_action": "补充包含品类关键词和核心卖点的 SEO title。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308285098",
+        "product_title": "Vintage Lapis Lazuli Pearl Earrings",
+        "handle": "vintage-lapis-lazuli-pearl-earrings",
+        "task_type": "product_page_optimization",
+        "priority": "medium",
+        "issue_type": "missing_seo_description",
+        "evidence": "SEO description 为空。",
+        "suggested_action": "补充简洁的 SEO description，突出购买理由。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308285098",
+        "product_title": "Vintage Lapis Lazuli Pearl Earrings",
+        "handle": "vintage-lapis-lazuli-pearl-earrings",
+        "task_type": "conversion_review",
+        "priority": "medium",
+        "issue_type": "has_inventory_but_no_recent_sales",
+        "evidence": "该商品有库存，但最近 10 个订单中未出现。",
+        "suggested_action": "建议检查商品页吸引力、价格、广告入口，或评估是否适合做 bundle。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308317866",
+        "product_title": "Monies Wooden Coconut Shell Raffia Earrings",
+        "handle": "monies-wooden-coconut-shell-raffia-earrings",
+        "task_type": "product_page_optimization",
+        "priority": "medium",
+        "issue_type": "missing_seo_title",
+        "evidence": "SEO title 为空。",
+        "suggested_action": "补充包含品类关键词和核心卖点的 SEO title。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308317866",
+        "product_title": "Monies Wooden Coconut Shell Raffia Earrings",
+        "handle": "monies-wooden-coconut-shell-raffia-earrings",
+        "task_type": "product_page_optimization",
+        "priority": "medium",
+        "issue_type": "missing_seo_description",
+        "evidence": "SEO description 为空。",
+        "suggested_action": "补充简洁的 SEO description，突出购买理由。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308317866",
+        "product_title": "Monies Wooden Coconut Shell Raffia Earrings",
+        "handle": "monies-wooden-coconut-shell-raffia-earrings",
+        "task_type": "conversion_review",
+        "priority": "medium",
+        "issue_type": "has_inventory_but_no_recent_sales",
+        "evidence": "该商品有库存，但最近 10 个订单中未出现。",
+        "suggested_action": "建议检查商品页吸引力、价格、广告入口，或评估是否适合做 bundle。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308383402",
+        "product_title": "Baroque Pearl Fan Earrings",
+        "handle": "baroque-pearl-fan-earrings",
+        "task_type": "product_page_optimization",
+        "priority": "medium",
+        "issue_type": "missing_seo_title",
+        "evidence": "SEO title 为空。",
+        "suggested_action": "补充包含品类关键词和核心卖点的 SEO title。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308383402",
+        "product_title": "Baroque Pearl Fan Earrings",
+        "handle": "baroque-pearl-fan-earrings",
+        "task_type": "product_page_optimization",
+        "priority": "medium",
+        "issue_type": "missing_seo_description",
+        "evidence": "SEO description 为空。",
+        "suggested_action": "补充简洁的 SEO description，突出购买理由。",
+        "status": "pending"
+      },
+      {
+        "product_id": "gid://shopify/Product/8453308383402",
+        "product_title": "Baroque Pearl Fan Earrings",
+        "handle": "baroque-pearl-fan-earrings",
+        "task_type": "conversion_review",
+        "priority": "medium",
+        "issue_type": "has_inventory_but_no_recent_sales",
+        "evidence": "该商品有库存，但最近 10 个订单中未出现。",
+        "suggested_action": "建议检查商品页吸引力、价格、广告入口，或评估是否适合做 bundle。",
+        "status": "pending"
+      }
+    ],
+    "source": {
+      "product_limit": 10,
+      "order_limit": 10,
+      "low_inventory_threshold": 5
+    }
+  }
+}
