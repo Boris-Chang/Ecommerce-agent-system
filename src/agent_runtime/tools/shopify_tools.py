@@ -4,18 +4,6 @@ from langchain.tools import tool
 
 from analytics.action_tasks import generate_action_tasks_from_report
 from analytics.store_diagnosis import generate_store_diagnosis_report
-from reports.exporters import (
-    export_action_tasks_to_json,
-    export_action_tasks_to_markdown,
-    export_report_to_json,
-    export_report_to_markdown,
-)
-from reports.session_store import (
-    get_latest_action_tasks_from_memory,
-    get_latest_report_from_memory,
-    save_latest_action_tasks_in_memory,
-    save_latest_report_in_memory,
-)
 from integrations.shopify.service import (
     get_product_detail,
     get_products,
@@ -33,7 +21,7 @@ def shopify_generate_store_diagnosis_report(
     """
     生成 Shopify 店铺商品运营诊断报告。
 
-    这个工具只生成报告，并将报告暂存在当前会话内存中；不会自动生成 JSON 或 Markdown 文件。
+    这个工具只生成并返回报告，不保存进程内状态，也不生成文件。
 
     Args:
         product_limit: 要诊断的商品数量，默认 10 个。
@@ -52,61 +40,9 @@ def shopify_generate_store_diagnosis_report(
         order_limit=order_limit,
         low_inventory_threshold=low_inventory_threshold,
     )
-    report_id = save_latest_report_in_memory(report)
-
     return {
         "success": True,
-        "report_id": report_id,
         "report": report,
-        "export_prompt": {
-            "should_ask_user": True,
-            "question": "是否需要将这份诊断报告导出为 JSON / Markdown 文档？回复“是”将默认同时生成 JSON 和 Markdown；也可以回复“只生成 JSON”或“只生成 Markdown”。",
-        },
-    }
-
-
-@tool
-def shopify_export_latest_diagnosis_report(
-    export_json: bool = True,
-    export_markdown: bool = True,
-) -> dict[str, Any]:
-    """
-    将最近一次 Shopify 店铺诊断报告导出为 JSON 和/或 Markdown 文件。
-
-    Args:
-        export_json: 是否导出 JSON 文件。默认 True。
-        export_markdown: 是否导出 Markdown 文件。默认 True。
-
-    当用户在生成诊断报告后回复“是”“生成”“导出”“都生成”“只生成 JSON”“只生成 Markdown”时使用。
-    如果用户没有明确指定格式，默认同时生成 JSON 和 Markdown。
-    """
-    report_id, report = get_latest_report_from_memory()
-
-    exported_files = {}
-
-    if export_json:
-        exported_files["json"] = export_report_to_json(
-            report=report,
-            report_id=report_id,
-        )
-
-    if export_markdown:
-        exported_files["markdown"] = export_report_to_markdown(
-            report=report,
-            report_id=report_id,
-        )
-
-    if not exported_files:
-        return {
-            "success": False,
-            "message": "没有选择任何导出格式。",
-        }
-
-    return {
-        "success": True,
-        "report_id": report_id,
-        "exported_files": exported_files,
-        "message": "诊断报告已成功导出。",
     }
 
 
@@ -275,60 +211,9 @@ def shopify_generate_action_tasks(
         },
     }
 
-    action_tasks_id = save_latest_action_tasks_in_memory(payload)
-
     return {
         "success": True,
-        "action_tasks_id": action_tasks_id,
         "summary": payload["summary"],
         "task_count": payload["task_count"],
         "tasks": payload["tasks"],
-        "export_prompt": {
-            "should_ask_user": True,
-            "question": "是否需要将这份运营任务清单导出为 JSON / Markdown 文档？回复“是”将默认同时生成 JSON 和 Markdown；也可以回复“只生成 JSON”或“只生成 Markdown”。",
-        },
-    }
-
-
-@tool
-def shopify_export_latest_action_tasks(
-    export_json: bool = True,
-    export_markdown: bool = True,
-) -> dict[str, Any]:
-    """
-    将最近一次 Shopify 运营任务清单导出为 JSON 和/或 Markdown 文件。
-
-    Args:
-        export_json: 是否导出 JSON 文件。默认 True。
-        export_markdown: 是否导出 Markdown 文件。默认 True。
-
-    当用户在生成运营任务清单后回复“是”“生成”“导出”“都生成”“只生成 JSON”“只生成 Markdown”时使用。
-    """
-    action_tasks_id, action_tasks_payload = get_latest_action_tasks_from_memory()
-
-    exported_files = {}
-
-    if export_json:
-        exported_files["json"] = export_action_tasks_to_json(
-            action_tasks_payload=action_tasks_payload,
-            action_tasks_id=action_tasks_id,
-        )
-
-    if export_markdown:
-        exported_files["markdown"] = export_action_tasks_to_markdown(
-            action_tasks_payload=action_tasks_payload,
-            action_tasks_id=action_tasks_id,
-        )
-
-    if not exported_files:
-        return {
-            "success": False,
-            "message": "没有选择任何导出格式。",
-        }
-
-    return {
-        "success": True,
-        "action_tasks_id": action_tasks_id,
-        "exported_files": exported_files,
-        "message": "运营任务清单已成功导出。",
     }

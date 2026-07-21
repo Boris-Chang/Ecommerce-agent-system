@@ -67,13 +67,15 @@ ProductPageDraftOutput JSON Schema:
 """
 
 
-model = _build_model().bind(response_format={"type": "json_object"})
+def build_agent():
+    """Build the product-page draft agent without import-time side effects."""
+    model = _build_model().bind(response_format={"type": "json_object"})
 
-
-product_page_draft_agent = create_agent(
-    model=model,
-    tools=[
-        shopify_get_product_detail,
-    ],
-    system_prompt=PRODUCT_PAGE_DRAFT_SYSTEM_PROMPT,
-)
+    return create_agent(
+        model=model,
+        tools=[
+            shopify_get_product_detail,
+        ],
+        system_prompt=PRODUCT_PAGE_DRAFT_SYSTEM_PROMPT,
+        name="product_page_draft_agent",
+    )
