@@ -1,0 +1,123 @@
+{
+  "baseline_version": "coolcool_erp_v0.2_business_only",
+  "source_file": "coolcool_erp_v0.2_full.sql",
+  "source_generated_at": "2026-07-20",
+  "source_sha256": "492F5B225319A721CFA35E3BF7932D7A7568837088E4B230469B67F4705D18AB",
+  "expected_business_schema_count": 12,
+  "expected_business_table_count": 77,
+  "business_schemas": {
+    "analytics": [
+      "v_channel_pnl_monthly",
+      "v_customer_ltv",
+      "v_forecast_accuracy",
+      "v_inventory_cover",
+      "v_return_reason_analysis",
+      "v_sku_daily_sales",
+      "v_sku_pnl_monthly"
+    ],
+    "catalog": [
+      "bom_headers",
+      "bom_lines",
+      "categories",
+      "channel_listings",
+      "listing_prices",
+      "product_variants",
+      "products",
+      "sku_cost_versions",
+      "skus"
+    ],
+    "crm": [
+      "customer_addresses",
+      "customer_consents",
+      "customer_identities",
+      "customers",
+      "support_tickets"
+    ],
+    "finance": [
+      "channel_fees",
+      "chart_of_accounts",
+      "journal_entries",
+      "journal_lines",
+      "settlement_lines",
+      "settlements"
+    ],
+    "integration": [
+      "dead_letter_events",
+      "sync_cursors",
+      "sync_runs",
+      "webhook_events"
+    ],
+    "inventory": [
+      "inventory_balances",
+      "inventory_movements",
+      "inventory_reservations",
+      "inventory_snapshots",
+      "stock_transfer_lines",
+      "stock_transfers",
+      "warehouses"
+    ],
+    "logistics": [
+      "carriers",
+      "fulfillment_lines",
+      "fulfillments",
+      "packages",
+      "shipping_services",
+      "tracking_events"
+    ],
+    "marketing": [
+      "ad_accounts",
+      "ad_spend_daily",
+      "attribution_touchpoints",
+      "campaigns"
+    ],
+    "mdm": [
+      "brands",
+      "channel_accounts",
+      "currencies",
+      "exchange_rates",
+      "legal_entities",
+      "markets",
+      "sales_channels"
+    ],
+    "planning": [
+      "forecast_runs",
+      "replenishment_policies",
+      "replenishment_recommendations",
+      "weekly_forecasts"
+    ],
+    "procurement": [
+      "goods_receipt_lines",
+      "goods_receipts",
+      "inbound_shipment_lines",
+      "inbound_shipments",
+      "purchase_order_lines",
+      "purchase_orders",
+      "supplier_skus",
+      "suppliers"
+    ],
+    "sales": [
+      "discount_allocations",
+      "order_discounts",
+      "order_lines",
+      "orders",
+      "payment_transactions",
+      "payments",
+      "refund_lines",
+      "refunds",
+      "return_lines",
+      "returns"
+    ]
+  },
+  "excluded_from_this_baseline": {
+    "agent": [
+      "execution_logs",
+      "outcomes",
+      "proposal_reviews",
+      "proposals"
+    ]
+  },
+  "notes": [
+    "The analytics.v_* objects are BASE TABLE analytical snapshots in v0.2, not SQL views.",
+    "The agent schema is intentionally excluded from this implementation round."
+  ]
+}

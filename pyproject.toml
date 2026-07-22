@@ -4,11 +4,15 @@ version = "0.1.0"
 description = "A Shopify store operations assistant built with Python and LangChain."
 requires-python = ">=3.10"
 dependencies = [
+    "alembic>=1.14",
     "langchain>=1.0",
     "langchain-deepseek>=1.0",
     "langchain-openai>=1.0",
+    "psycopg[binary]>=3.2",
     "python-dotenv>=1.0",
+    "pydantic-settings>=2.7",
     "requests>=2.34",
+    "sqlalchemy>=2.0",
     "tzdata>=2025.2",
 ]
 
@@ -23,6 +27,14 @@ where = ["src"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+addopts = "--strict-markers"
+markers = [
+    "architecture: verifies source-layer dependency boundaries",
+    "contract: verifies an external interface payload contract using local fixtures",
+    "data_quality: verifies deterministic data-quality rules against a test database",
+    "integration: requires an explicitly configured isolated PostgreSQL test database",
+    "shopify_live: calls a real Shopify store and is never part of the default test run",
+]
 
 [build-system]
 requires = ["setuptools>=69", "wheel"]

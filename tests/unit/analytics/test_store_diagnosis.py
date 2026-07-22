@@ -68,7 +68,9 @@ def test_analyze_inventory_priorities() -> None:
 def test_summarize_recent_orders() -> None:
     orders = [
         {
-            "totalPriceSet": {"shopMoney": {"amount": "25.50", "currencyCode": "USD"}},
+            "totalPriceSet": {
+                "shopMoney": {"amount": "25.50", "currencyCode": "USD"}
+            },
             "lineItems": {
                 "edges": [
                     {"node": {"title": "Product A", "quantity": 2}},
@@ -77,8 +79,12 @@ def test_summarize_recent_orders() -> None:
             },
         },
         {
-            "totalPriceSet": {"shopMoney": {"amount": "10", "currencyCode": "USD"}},
-            "lineItems": {"edges": [{"node": {"title": "Product A", "quantity": 1}}]},
+            "totalPriceSet": {
+                "shopMoney": {"amount": "10", "currencyCode": "USD"}
+            },
+            "lineItems": {
+                "edges": [{"node": {"title": "Product A", "quantity": 1}}]
+            },
         },
     ]
 
@@ -87,7 +93,10 @@ def test_summarize_recent_orders() -> None:
     assert summary["order_count"] == 2
     assert summary["estimated_revenue"] == 35.5
     assert summary["currency"] == "USD"
-    assert summary["top_selling_products"][0] == {"title": "Product A", "quantity": 3}
+    assert summary["top_selling_products"][0] == {
+        "title": "Product A",
+        "quantity": 3,
+    }
 
 
 def test_generate_action_tasks_from_report_sorts_by_priority() -> None:

@@ -12,6 +12,7 @@
 - 诊断商品页、SEO、库存和近期销售风险
 - 生成运营任务清单
 - 生成符合 `ProductPageDraftOutput` 的商品页优化草稿
+- 通过只读 PostgreSQL Repository 查询销售、库存、客户和利润快照
 
 ## 安全边界
 
@@ -28,11 +29,14 @@
 本轮采用渐进式的“接口层—应用层—Repository—基础设施层”：
 
 - 接口层 `src/agent_app/`：面向未来 API、Worker、测试适配器的可编程入口
-- 应用层 `src/agent_runtime/`、`src/analytics/`：Agent、工具编排和确定性诊断逻辑
-- Repository：本轮没有持久化需求，因此暂不创建空实现；后续引入 PostgreSQL 时增加
-- 基础设施层 `src/integrations/`：Shopify Admin API 客户端
+- 原有应用层 `src/agent_runtime/`、`src/analytics/`：Agent、工具编排和确定性诊断逻辑
+- 新应用层 `src/application/`：Repository 接口和只读 DTO；本轮暂与原有目录共存
+- Repository 实现 `src/infrastructure/database/repositories/`：PostgreSQL 查询实现
+- 基础设施层 `src/integrations/`、`src/infrastructure/`：Shopify API 和 PostgreSQL；本轮暂时并行
 - 数据契约 `src/schemas/`：Agent 结构化输出 schema
 - 模型适配 `src/models/`：DeepSeek / OpenAI provider 选择
+
+本轮不创建 Agent 表、不修改现有业务表，也不把 PostgreSQL Repository 接入现有 Agent。`models → llm` 重命名和目录合并留待后续讨论。
 
 依赖方向保持为：接口层 → 应用层 → 基础设施层。应用结果由调用方持有，不写入模块级全局状态。
 
@@ -46,7 +50,45 @@ python -m venv .venv
 copy .env.example .env
 ```
 
-然后编辑 `.env`，填入模型和 Shopify Admin API 配置。
+然后编辑 `.env`，填入模型、Shopify Admin API 和只读 PostgreSQL 应用账号配置。
+
+## PostgreSQL Repository
+
+当前批准范围为 12 个只读业务 Schema、77 张业务表。候选 DDL 基线来自 `coolcool_erp_v0.2_full.sql`，其结构和 SHA-256 记录在 `db/baseline_manifest.json`。候选文件中的 `agent` Schema 和 4 张 Agent 表未纳入本轮。
+
+应用连接通过两层方式保持只读：
+
+- 数据库角色设置 `default_transaction_read_only=on`
+- SQLAlchemy Engine 连接参数再次强制 `default_transaction_read_only=on`
+
+Repository 当前读取四类 `analytics` 快照表：
+
+- SKU 日销售
+- 库存覆盖
+- 客户 LTV
+- SKU / 渠道月度利润
+
+这些 `analytics.v_*` 对象在 v0.2 中是快照表，不是 SQL View。
+
+配置数据库后执行只读健康检查：
+
+```powershell
+.\.venv\Scripts\python -c "from infrastructure.database import create_database_engine; from infrastructure.database.health import check_database_health; print(check_database_health(create_database_engine()))"
+```
+
+验证候选 DDL：
+
+```powershell
+.\.venv\Scripts\python -m infrastructure.database.schema_validation --ddl "C:\path\to\coolcool_erp_v0.2_full.sql"
+```
+
+验证 live database：
+
+```powershell
+.\.venv\Scripts\python -m infrastructure.database.schema_validation --database
+```
+
+表级 live validator 通过后，还必须按照 `db/migrations/README.md`，使用同一版本的 `pg_dump --schema-only` 对 reference database 与 live database 做完整结构对比。两道验证均通过后，才允许手工执行 Alembic baseline stamp。应用不会自动执行迁移。
 
 ## 可编程调用
 
@@ -88,4 +130,4 @@ draft = invoke_product_page_draft_agent(
 .\.venv\Scripts\python -m pytest
 ```
 
-测试默认走离线逻辑，不需要真实 Shopify 或模型 API 调用。
+测试默认走离线逻辑，不需要真实 Shopify、PostgreSQL 或模型 API 调用。配置 `DATABASE_URL` 后会额外运行只读数据库契约测试。
