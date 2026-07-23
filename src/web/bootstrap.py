@@ -12,7 +12,14 @@ from infrastructure.database import (
 )
 from web.exception_handlers import register_exception_handlers
 from web.paths import STATIC_DIR, TEMPLATES_DIR
-from web.routes import health, inventory, sales
+from web.routes import (
+    channel_sales,
+    health,
+    inventory,
+    refunds,
+    sales,
+    weekly_sales,
+)
 from web.settings import WebSettings
 
 
@@ -44,6 +51,9 @@ def create_app(
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
     app.include_router(health.router)
     app.include_router(sales.router)
+    app.include_router(weekly_sales.router)
+    app.include_router(refunds.router)
+    app.include_router(channel_sales.router)
     app.include_router(inventory.router)
     register_exception_handlers(app, templates)
     return app
