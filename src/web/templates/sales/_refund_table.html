@@ -1,0 +1,42 @@
+<div class="table-responsive">
+  <table class="table app-table refund-table align-middle mb-0">
+    <thead>
+      <tr>
+        <th>{{ period_label }}</th>
+        <th>SKU</th>
+        <th>原因</th>
+        <th>状态</th>
+        <th class="text-end">退款次数</th>
+        <th class="text-end">退款订单</th>
+        <th class="text-end">退款件数</th>
+        <th class="text-end">商品退款</th>
+        <th class="text-end">税费退款</th>
+        <th class="text-end">运费退款</th>
+        <th>币种</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in refund_rows %}
+      <tr>
+        <td class="text-secondary">{{ row.period_start }}</td>
+        <td><span class="sku-code">{{ row.sku_id }}</span></td>
+        <td>{{ row.refund_reason }}</td>
+        <td>{{ row.refund_status }}</td>
+        <td class="text-end">{{ row.refund_count }}</td>
+        <td class="text-end">{{ row.refunded_order_count }}</td>
+        <td class="text-end fw-semibold">{{ row.refunded_units }}</td>
+        <td class="text-end">{{ row.item_refund_amount }}</td>
+        <td class="text-end">{{ row.tax_refund_amount }}</td>
+        <td class="text-end">{{ row.shipping_refund_amount }}</td>
+        <td><span class="currency-pill">{{ row.currency_code }}</span></td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="11">
+          <div class="empty-state compact">没有可展示的退款记录。</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

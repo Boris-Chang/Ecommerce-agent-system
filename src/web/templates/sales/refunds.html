@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}SKU 退款分析 · {{ web_title }}{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <div>
+    <span class="eyebrow">Refund intelligence</span>
+    <h1>SKU 退款分析</h1>
+    <p>查看指定渠道内按日和按自然周汇总的 SKU 退款数量与退款金额。</p>
+  </div>
+  <div class="heading-meta">
+    <span class="meta-chip">{{ page.channel_account_id }}</span>
+    <span class="meta-chip">{{ page.start_date }} — {{ page.end_date }}</span>
+  </div>
+</section>
+
+{% include "sales/_navigation.html" %}
+
+<section class="summary-grid summary-grid-sales" aria-label="退款数据概况">
+  <article class="summary-card accent-danger">
+    <span>日退款记录</span>
+    <strong>{{ page.daily_row_count }}</strong>
+    <small>SKU × 日期 × 原因 × 状态</small>
+  </article>
+  <article class="summary-card">
+    <span>周退款记录</span>
+    <strong>{{ page.weekly_row_count }}</strong>
+    <small>SKU × 自然周 × 原因 × 状态</small>
+  </article>
+  <article class="summary-card">
+    <span>数据截至</span>
+    <strong class="summary-date">{{ page.data_as_of }}</strong>
+    <small>{{ page.currency_codes | join(" / ") if page.currency_codes else "暂无币种" }}</small>
+  </article>
+</section>
+
+{% if page.has_multiple_currencies %}
+<div class="alert alert-warning border-0 data-alert" role="alert">
+  退款结果包含多个币种，页面只展示原始金额，不跨币种汇总。
+</div>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <span class="eyebrow">Daily refunded units</span>
+      <h2>每日退款件数</h2>
+    </div>
+    <span class="panel-caption">同一天的 SKU 退款件数仅用于图表汇总</span>
+  </div>
+  {% if page.empty %}
+    <div class="empty-state">
+      <strong>当前时间范围没有退款数据</strong>
+      <span>退款查询直接读取订单与退款业务表。</span>
+    </div>
+  {% else %}
+    <div
+      class="chart"
+      role="img"
+      aria-label="每日退款件数图"
+      data-chart-options='{{ page.chart_options | tojson }}'
+    ></div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <span class="eyebrow">Daily refunds</span>
+      <h2>日退款明细</h2>
+    </div>
+    <span class="panel-caption">生成时间 {{ page.generated_at }}</span>
+  </div>
+  {% set refund_rows = page.daily_rows %}
+  {% set period_label = "退款日期" %}
+  {% include "sales/_refund_table.html" %}
+</section>
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <span class="eyebrow">Weekly refunds</span>
+      <h2>周退款明细</h2>
+    </div>
+    <span class="panel-caption">边界周可能只包含查询区间内的部分日期</span>
+  </div>
+  {% set refund_rows = page.weekly_rows %}
+  {% set period_label = "周起始日" %}
+  {% include "sales/_refund_table.html" %}
+</section>
+{% endblock %}

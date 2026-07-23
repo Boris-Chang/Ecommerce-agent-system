@@ -190,6 +190,9 @@ result = SkuWeeklyForecastService(unit_of_work.sales).generate(
 第一阶段 Web 层采用 FastAPI + Jinja2 + HTMX + Bootstrap 5 + Apache ECharts，提供：
 
 - `/sales`：默认渠道最近一段时间的 SKU 日销量趋势和销售明细
+- `/sales/weekly`：默认渠道按自然周汇总的 SKU 销量、订单量和销售额
+- `/sales/refunds`：默认渠道的 SKU 日退款和周退款明细
+- `/sales/channels`：各渠道在同一币种内的销量占比和净销售额占比
 - `/inventory`：当前库存组成、在途库存、补货风险、积压风险和库存公式差异
 - `/health/live`：进程存活检查
 - `/health/ready`：PostgreSQL 只读连接检查
@@ -242,13 +245,15 @@ Application Service 不依赖 Web 或基础设施 UoW。FastAPI 请求依赖负�
 当前只有以下业务形成了从 Web 到 PostgreSQL 的完整链路：
 
 - `/sales`：`SkuSalesService → PostgresSalesAnalyticsRepository → analytics.v_sku_daily_sales`
+- `/sales/weekly`：`SkuSalesService → PostgresSalesAnalyticsRepository → analytics.v_sku_daily_sales`
+- `/sales/refunds`：`SkuRefundService → PostgresSkuRefundRepository → sales.refunds / refund_lines / order_lines / orders`
+- `/sales/channels`：`ChannelSalesShareService → PostgresChannelSalesRepository → analytics.v_sku_daily_sales`
 - `/inventory`：`InventoryBalanceService → PostgresInventoryRepository → inventory.inventory_balances`
 - `/inventory`：`InventoryRiskService → PostgresInventoryRepository → analytics.v_inventory_cover`
 
-SKU 周销售、SKU 日/周退款、渠道销售占比和 SKU 周预测已经具备
-Application Service 与 PostgreSQL Repository，但尚未接入 Web Route、
-Presenter 和页面。客户 LTV、SKU 月度利润和渠道月度利润当前只有 DTO 与
-Repository 查询能力，也尚未接入 Web。
+SKU 周预测已经具备 Application Service 与 PostgreSQL Repository，但尚未
+接入 Web Route、Presenter 和页面。客户 LTV、SKU 月度利润和渠道月度利润当前
+只有 DTO 与 Repository 查询能力，也尚未接入 Web。
 
 已知限制：`PostgresCustomerRepository.list_customer_lifetime_value()` 当前在
 PostgreSQL/psycopg 下会因可选筛选参数缺少显式类型转换而触发

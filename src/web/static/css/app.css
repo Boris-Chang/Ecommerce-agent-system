@@ -256,6 +256,37 @@ body {
   font-weight: 700;
 }
 
+.section-navigation {
+  display: flex;
+  gap: 8px;
+  margin: -6px 0 20px;
+  padding: 6px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.section-navigation-link {
+  flex: 0 0 auto;
+  padding: 8px 13px;
+  border-radius: 9px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.section-navigation-link:hover {
+  color: var(--ink);
+  background: #f1f5f8;
+}
+
+.section-navigation-link.active {
+  color: #166b61;
+  background: var(--teal-soft);
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -380,6 +411,10 @@ body {
   border-top: 1px solid #edf0f4;
   color: #29384d;
   font-size: 12px;
+}
+
+.refund-table {
+  min-width: 1180px;
 }
 
 .app-table > :not(caption) > * > * {

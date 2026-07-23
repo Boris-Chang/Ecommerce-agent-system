@@ -1,9 +1,21 @@
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
+from application.dto.channel import ChannelSalesShare
 from application.dto.inventory import InventoryBalance, InventoryCover
-from application.dto.sku import SkuDailySales
-from web.presenters import InventoryPresenter, SalesPresenter
+from application.dto.sku import (
+    SkuDailyRefunds,
+    SkuDailySales,
+    SkuWeeklyRefunds,
+    SkuWeeklySales,
+)
+from web.presenters import (
+    ChannelSalesSharePresenter,
+    InventoryPresenter,
+    RefundsPresenter,
+    SalesPresenter,
+    WeeklySalesPresenter,
+)
 
 
 def test_sales_presenter_builds_chart_and_currency_warning() -> None:
@@ -73,3 +85,89 @@ def test_inventory_presenter_marks_available_quantity_difference() -> None:
     assert page.balances[0].available_difference == 5
     assert page.balances[0].has_balance_warning is True
     assert page.overstock_count == 1
+
+
+def test_weekly_sales_presenter_builds_weekly_chart() -> None:
+    rows = [
+        SkuWeeklySales(
+            week_start=date(2026, 7, 6),
+            sku_id="SKU004",
+            channel_account_id="CA_SHOPIFY_US",
+            units_sold=7,
+            net_sales=Decimal("130"),
+            currency_code="USD",
+        )
+    ]
+
+    page = WeeklySalesPresenter.to_page(
+        rows=rows,
+        channel_account_id="CA_SHOPIFY_US",
+        start_date=date(2026, 7, 1),
+        end_date=date(2026, 7, 31),
+        generated_at=datetime(2026, 7, 24, tzinfo=timezone.utc),
+    )
+
+    assert page.row_count == 1
+    assert page.data_as_of == "2026-07-06"
+    assert page.rows[0].net_sales == "130.00"
+    assert page.chart_options["series"][0]["data"] == [7]
+
+
+def test_refunds_presenter_keeps_daily_and_weekly_grains_separate() -> None:
+    common = {
+        "sku_id": "SKU005",
+        "channel_account_id": "CA_SHOPIFY_US",
+        "refund_reason": "damaged",
+        "refund_status": "completed",
+        "refund_count": 1,
+        "refunded_order_count": 1,
+        "refunded_units": 2,
+        "item_refund_amount": Decimal("44"),
+        "tax_refund_amount": Decimal("2"),
+        "shipping_refund_amount": Decimal("3"),
+        "currency_code": "USD",
+    }
+    daily = SkuDailyRefunds(refund_date=date(2026, 7, 12), **common)
+    weekly = SkuWeeklyRefunds(week_start=date(2026, 7, 6), **common)
+
+    page = RefundsPresenter.to_page(
+        daily_rows=[daily],
+        weekly_rows=[weekly],
+        channel_account_id="CA_SHOPIFY_US",
+        start_date=date(2026, 7, 1),
+        end_date=date(2026, 7, 31),
+        generated_at=datetime(2026, 7, 24, tzinfo=timezone.utc),
+    )
+
+    assert page.daily_row_count == 1
+    assert page.weekly_row_count == 1
+    assert page.daily_rows[0].period_start == "2026-07-12"
+    assert page.weekly_rows[0].period_start == "2026-07-06"
+    assert page.chart_options["series"][0]["data"] == [2]
+
+
+def test_channel_sales_presenter_displays_precomputed_shares() -> None:
+    rows = [
+        ChannelSalesShare(
+            channel_account_id="CA_SHOPIFY_US",
+            units_sold=75,
+            gross_sales=Decimal("800"),
+            discount_amount=Decimal("50"),
+            net_sales=Decimal("750"),
+            currency_code="USD",
+            units_share_pct=Decimal("75"),
+            net_sales_share_pct=Decimal("75"),
+        )
+    ]
+
+    page = ChannelSalesSharePresenter.to_page(
+        rows=rows,
+        start_date=date(2026, 7, 1),
+        end_date=date(2026, 7, 31),
+        generated_at=datetime(2026, 7, 24, tzinfo=timezone.utc),
+    )
+
+    assert page.channel_count == 1
+    assert page.rows[0].units_share_pct == "75.00%"
+    assert page.rows[0].net_sales == "750.00"
+    assert page.chart_options["series"][1]["data"] == [75.0]
