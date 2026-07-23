@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{% block title %}{{ web_title | default("Ecommerce BI") }}{% endblock %}</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+  <link href="{{ url_for('static', path='/css/app.css') }}" rel="stylesheet">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="app-sidebar">
+      <a class="brand" href="/sales" aria-label="Ecommerce BI 首页">
+        <span class="brand-mark">E</span>
+        <span>
+          <strong>{{ web_title | default("Ecommerce BI") }}</strong>
+          <small>经营分析中心</small>
+        </span>
+      </a>
+
+      <nav class="app-navigation" aria-label="主导航">
+        <p class="navigation-label">分析工作区</p>
+        <a
+          class="navigation-link {% if active_navigation == 'sales' %}active{% endif %}"
+          href="/sales"
+        >
+          <span class="navigation-icon">销</span>
+          <span>销售分析</span>
+        </a>
+        <a
+          class="navigation-link {% if active_navigation == 'inventory' %}active{% endif %}"
+          href="/inventory"
+        >
+          <span class="navigation-icon">库</span>
+          <span>库存分析</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-note">
+        <span class="status-dot"></span>
+        <div>
+          <strong>只读分析模式</strong>
+          <small>不会修改业务数据</small>
+        </div>
+      </div>
+    </aside>
+
+    <main class="app-main">
+      <header class="app-topbar">
+        <div>
+          <span class="eyebrow">Ecommerce operations</span>
+          <strong>经营数据控制台</strong>
+        </div>
+        <div class="topbar-status">
+          <span class="status-dot"></span>
+          PostgreSQL Read Only
+        </div>
+      </header>
+
+      <div class="app-content">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"
+    defer
+  ></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    defer
+  ></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"
+    defer
+  ></script>
+  <script src="{{ url_for('static', path='/js/charts.js') }}" defer></script>
+  <script src="{{ url_for('static', path='/js/app.js') }}" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

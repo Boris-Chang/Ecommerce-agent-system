@@ -1,0 +1,27 @@
+<div class="table-responsive">
+  <table class="table app-table compact-table align-middle mb-0">
+    <thead>
+      <tr>
+        <th>SKU / 仓库</th>
+        <th class="text-end">可售</th>
+        <th class="text-end">在途</th>
+        <th class="text-end">覆盖天数</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in page.replenishment_risks %}
+      <tr>
+        <td>
+          <strong>{{ row.sku_id }}</strong>
+          <small>{{ row.warehouse_id }}</small>
+        </td>
+        <td class="text-end">{{ row.available_qty }}</td>
+        <td class="text-end">{{ row.incoming_qty }}</td>
+        <td class="text-end fw-semibold">{{ row.inventory_cover_days }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="text-secondary">暂无补货风险。</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

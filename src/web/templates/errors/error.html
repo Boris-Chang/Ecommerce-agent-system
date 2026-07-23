@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}请求失败 · Ecommerce BI{% endblock %}
+
+{% block content %}
+<section class="error-state">
+  <span class="error-code">{{ status_code }}</span>
+  <h1>请求未能完成</h1>
+  <p>{{ message }}</p>
+  <a class="btn btn-dark" href="/sales">返回销售分析</a>
+</section>
+{% endblock %}
