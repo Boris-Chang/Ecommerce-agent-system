@@ -1,0 +1,19 @@
+{
+  "data": {
+    "products": {
+      "edges": [
+        {
+          "node": {
+            "id": "gid://shopify/Product/123",
+            "title": "Sample Product",
+            "handle": "sample-product",
+            "status": "ACTIVE",
+            "productType": "Accessories",
+            "vendor": "Demo Brand",
+            "totalInventory": 8
+          }
+        }
+      ]
+    }
+  }
+}
