@@ -8,6 +8,12 @@ from infrastructure.database.repositories.analytics import (
     PostgresProfitRepository,
     PostgresSalesAnalyticsRepository,
 )
+from infrastructure.database.repositories.refunds import (
+    PostgresSkuRefundRepository,
+)
+from infrastructure.database.repositories.channel_sales import (
+    PostgresChannelSalesRepository,
+)
 from infrastructure.database.session import SessionFactory
 
 
@@ -21,6 +27,8 @@ class ReadOnlyUnitOfWork:
         self.session = self._session_factory()
         self.session.execute(text("SET TRANSACTION READ ONLY"))
         self.sales = PostgresSalesAnalyticsRepository(self.session)
+        self.channel_sales = PostgresChannelSalesRepository(self.session)
+        self.refunds = PostgresSkuRefundRepository(self.session)
         self.inventory = PostgresInventoryRepository(self.session)
         self.customers = PostgresCustomerRepository(self.session)
         self.profit = PostgresProfitRepository(self.session)

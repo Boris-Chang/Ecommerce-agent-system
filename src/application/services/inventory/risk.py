@@ -1,5 +1,5 @@
-from application.dto.analytics import InventoryCover
-from application.repositories.analytics import InventoryRepository
+from application.dto.inventory import InventoryCover
+from application.repositories.inventory import InventoryRepository
 
 
 REPLENISH_STATUS = "replenish"
