@@ -70,6 +70,30 @@ Repository 当前读取四类 `analytics` 快照表：
 
 这些 `analytics.v_*` 对象在 v0.2 中是快照表，不是 SQL View。
 
+## SKU 周预测
+
+`SkuWeeklyForecastService` 从 `analytics.v_sku_daily_sales` 按渠道账户、SKU 和自然周汇总历史销量，使用 `sku_weighted_moving_average:v0.1` 生成未来 1–52 周预测。`channel_account_id` 为必填项，服务不会隐式执行跨渠道汇总：
+
+- 最近四周权重依次为 40%、30%、20%、10%
+- 近期平均周增量按 50% 阻尼后加入 `forecast_p50`
+- 历史单步预测正残差的 90 分位数作为 `forecast_p90` 安全增量
+- 训练区间必须从周一开始、到周日结束，缺失周按零销量处理
+
+当前应用数据库连接保持只读，因此服务只返回版本化预测结果，不写入 `planning.forecast_runs` 或 `planning.weekly_forecasts`。预测持久化应由独立 Worker 使用单独的最小写入权限完成。
+
+```python
+from datetime import date
+
+from application.services import SkuWeeklyForecastService
+
+result = SkuWeeklyForecastService(unit_of_work.sales).generate(
+    channel_account_id="CA_SHOPIFY_US",
+    training_start=date(2026, 4, 13),
+    training_end=date(2026, 7, 12),
+    horizon_weeks=8,
+)
+```
+
 配置数据库后执行只读健康检查：
 
 ```powershell

@@ -23,6 +23,8 @@ def test_read_only_unit_of_work_owns_transaction() -> None:
     session = FakeSession()
     with ReadOnlyUnitOfWork(lambda: session) as unit_of_work:
         assert unit_of_work.sales is not None
+        assert unit_of_work.channel_sales is not None
+        assert unit_of_work.refunds is not None
         assert unit_of_work.inventory is not None
         assert unit_of_work.customers is not None
         assert unit_of_work.profit is not None

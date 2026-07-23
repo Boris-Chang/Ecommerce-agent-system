@@ -1,5 +1,5 @@
-from application.dto.analytics import InventoryCover
-from application.services.inventory_risk import InventoryRiskService
+from application.dto.inventory import InventoryCover
+from application.services.inventory import InventoryRiskService
 
 
 class FakeInventoryRepository:

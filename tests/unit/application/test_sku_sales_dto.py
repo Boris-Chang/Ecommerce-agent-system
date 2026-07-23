@@ -4,7 +4,7 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from application.dto.analytics import SkuDailySales
+from application.dto.sku import SkuDailySales
 
 
 def test_sku_daily_sales_coerces_database_values() -> None:
