@@ -39,6 +39,7 @@
 - `src/application/services/`：确定性应用服务，按 `sku`、`channel`、`inventory` 业务域分组
 - `src/application/forecasting/sku_weekly/`：可版本管理的 SKU 周预测算法
 - `src/infrastructure/database/repositories/`：PostgreSQL Repository 实现，同样按 `sku`、`channel`、`inventory`、`customer`、`profit` 业务域分组
+- `src/web/`：FastAPI、Jinja2、Presenter、ViewModel、页面模板与静态资源
 - `src/integrations/`：Shopify 等外部系统适配
 - `src/schemas/`：Agent 结构化输出契约
 - `src/models/`：DeepSeek / OpenAI 模型提供方选择
@@ -82,7 +83,16 @@ Repository 当前读取以下 `analytics` 快照表：
 - `analytics.v_sku_pnl_monthly`：SKU 月度利润
 - `analytics.v_channel_pnl_monthly`：渠道月度利润
 
-这些 `analytics.v_*` 对象在 v0.2 中是快照表，不是 SQL View。
+这些 `analytics.v_*` 对象在 v0.2 中是普通 PostgreSQL 快照表，不是
+SQL View 或 Materialized View。当前应用只负责只读查询，不包含生成或刷新
+这些快照的 ETL/Worker；新订单写入 `sales.orders` 后，不会自动出现在销售、
+库存覆盖、LTV 或利润快照中。
+
+快照中的 `data_origin` 必须作为数据血缘判断依据。当前基线包含
+`derived_sample`、`simulated*` 等样本或模拟来源，原始订单也可能同时包含
+`shopify_live` 和模拟渠道数据。因此“运行时真实访问 PostgreSQL”不等于
+“所有记录都是生产真实数据”。在生产分析前，应先完成真实渠道同步、快照刷新、
+数据新鲜度检查和来源校验。
 
 以下基础数据直接读取业务表：
 
@@ -174,6 +184,76 @@ result = SkuWeeklyForecastService(unit_of_work.sales).generate(
     horizon_weeks=8,
 )
 ```
+
+## Web Dashboard
+
+第一阶段 Web 层采用 FastAPI + Jinja2 + HTMX + Bootstrap 5 + Apache ECharts，提供：
+
+- `/sales`：默认渠道最近一段时间的 SKU 日销量趋势和销售明细
+- `/inventory`：当前库存组成、在途库存、补货风险、积压风险和库存公式差异
+- `/health/live`：进程存活检查
+- `/health/ready`：PostgreSQL 只读连接检查
+
+第一阶段页面通过固定版本 CDN 加载 Bootstrap、HTMX 和 ECharts；转入生产部署前再将这些资源迁入本地 `static/vendor`。
+
+当前阶段暂不提供登录认证、页面筛选和分页。默认渠道、销售查询窗口和查询上限由 `.env` 配置：
+
+```dotenv
+WEB_TITLE=Ecommerce BI
+WEB_DEFAULT_CHANNEL_ACCOUNT_ID=CA_SHOPIFY_US
+WEB_SALES_LOOKBACK_DAYS=90
+WEB_QUERY_LIMIT=500
+```
+
+开发启动：
+
+```powershell
+.\.venv\Scripts\python -m uvicorn web.main:app --reload
+```
+
+然后访问：
+
+```text
+http://localhost:8000/sales
+http://localhost:8000/inventory
+```
+
+Application Service 不依赖 Web 或基础设施 UoW。FastAPI 请求依赖负责创建 `ReadOnlyUnitOfWork`，再将其中的 Repository 实例传给 Application Service。模板只接收 Presenter 生成的 ViewModel，不执行 SQL 或业务指标计算。
+
+完整的只读页面执行链路为：
+
+```text
+浏览器
+→ FastAPI Route
+→ FastAPI Depends
+→ ReadOnlyUnitOfWork（SET TRANSACTION READ ONLY）
+→ Application Service
+→ Application Repository Protocol
+→ PostgreSQL Repository 实现
+→ PostgreSQL 表/分析快照
+→ DTO
+→ Presenter
+→ ViewModel
+→ Jinja2 Template
+→ HTML + ECharts
+→ 浏览器
+```
+
+当前只有以下业务形成了从 Web 到 PostgreSQL 的完整链路：
+
+- `/sales`：`SkuSalesService → PostgresSalesAnalyticsRepository → analytics.v_sku_daily_sales`
+- `/inventory`：`InventoryBalanceService → PostgresInventoryRepository → inventory.inventory_balances`
+- `/inventory`：`InventoryRiskService → PostgresInventoryRepository → analytics.v_inventory_cover`
+
+SKU 周销售、SKU 日/周退款、渠道销售占比和 SKU 周预测已经具备
+Application Service 与 PostgreSQL Repository，但尚未接入 Web Route、
+Presenter 和页面。客户 LTV、SKU 月度利润和渠道月度利润当前只有 DTO 与
+Repository 查询能力，也尚未接入 Web。
+
+已知限制：`PostgresCustomerRepository.list_customer_lifetime_value()` 当前在
+PostgreSQL/psycopg 下会因可选筛选参数缺少显式类型转换而触发
+`AmbiguousParameter`。接入客户 LTV 页面前需要先修复该查询并增加真实数据库
+集成测试。
 
 配置数据库后执行只读健康检查：
 

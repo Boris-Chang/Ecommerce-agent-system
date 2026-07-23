@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}页面不存在 · Ecommerce BI{% endblock %}
+
+{% block content %}
+<section class="error-state">
+  <span class="error-code">404</span>
+  <h1>找不到这个页面</h1>
+  <p>请求的分析页面不存在或已经移动。</p>
+  <a class="btn btn-dark" href="/sales">返回销售分析</a>
+</section>
+{% endblock %}

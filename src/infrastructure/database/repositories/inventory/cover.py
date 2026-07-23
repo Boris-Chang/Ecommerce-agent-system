@@ -62,7 +62,10 @@ class PostgresInventoryRepository:
             """
             SELECT *
             FROM analytics.v_inventory_cover
-            WHERE (:stock_status IS NULL OR stock_status = :stock_status)
+            WHERE (
+                CAST(:stock_status AS text) IS NULL
+                OR stock_status = CAST(:stock_status AS text)
+            )
             ORDER BY inventory_cover_days NULLS FIRST, sku_id, warehouse_id
             LIMIT :limit
             """,

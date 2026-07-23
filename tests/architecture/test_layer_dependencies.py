@@ -9,7 +9,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_ROOT = PROJECT_ROOT / "src"
 
 FORBIDDEN_IMPORTS = {
-    "application": {"agent_app", "agent_runtime", "infrastructure", "integrations"},
+    "application": {
+        "agent_app",
+        "agent_runtime",
+        "infrastructure",
+        "integrations",
+        "web",
+    },
     "core": {
         "agent_app",
         "agent_runtime",
@@ -17,8 +23,10 @@ FORBIDDEN_IMPORTS = {
         "application",
         "infrastructure",
         "integrations",
+        "web",
     },
-    "infrastructure": {"agent_app", "agent_runtime", "integrations"},
+    "infrastructure": {"agent_app", "agent_runtime", "integrations", "web"},
+    "web": {"agent_app", "agent_runtime", "integrations"},
 }
 
 
@@ -61,3 +69,25 @@ def test_database_repositories_do_not_commit_transactions() -> None:
                 violations.append(f"{path.relative_to(PROJECT_ROOT)}:{node.lineno}")
 
     assert violations == [], "Repository commit calls found:\n" + "\n".join(violations)
+
+
+def test_web_templates_do_not_contain_sql() -> None:
+    template_root = SOURCE_ROOT / "web" / "templates"
+    forbidden_patterns = (
+        "select ",
+        "insert ",
+        "update ",
+        "delete ",
+        "from analytics.",
+        "from inventory.",
+        "from sales.",
+    )
+    violations: list[str] = []
+    for path in sorted(template_root.rglob("*.html")):
+        content = path.read_text(encoding="utf-8").lower()
+        if any(pattern in content for pattern in forbidden_patterns):
+            violations.append(str(path.relative_to(PROJECT_ROOT)))
+
+    assert violations == [], "SQL found in Web templates:\n" + "\n".join(
+        violations
+    )

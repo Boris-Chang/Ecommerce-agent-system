@@ -169,3 +169,13 @@ def test_repository_rejects_invalid_range_and_limit() -> None:
 
     with pytest.raises(ValueError, match="limit"):
         inventory.list_inventory_cover(limit=10_001)
+
+
+def test_inventory_cover_query_casts_optional_status_parameter() -> None:
+    session = FakeSession([])
+    repository = PostgresInventoryRepository(session)
+
+    repository.list_inventory_cover(stock_status="replenish", limit=25)
+
+    assert "CAST(:stock_status AS text)" in session.statement
+    assert session.params == {"stock_status": "replenish", "limit": 25}

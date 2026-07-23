@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}销售分析 · {{ web_title }}{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <div>
+    <span class="eyebrow">Sales intelligence</span>
+    <h1>销售分析</h1>
+    <p>查看指定渠道内的 SKU 每日销量与销售金额明细。</p>
+  </div>
+  <div class="heading-meta">
+    <span class="meta-chip">{{ page.channel_account_id }}</span>
+    <span class="meta-chip">{{ page.start_date }} — {{ page.end_date }}</span>
+  </div>
+</section>
+
+<section class="summary-grid summary-grid-sales" aria-label="销售数据概况">
+  <article class="summary-card">
+    <span>数据行数</span>
+    <strong>{{ page.row_count }}</strong>
+    <small>SKU 日销售记录</small>
+  </article>
+  <article class="summary-card">
+    <span>数据截至</span>
+    <strong class="summary-date">{{ page.data_as_of }}</strong>
+    <small>最新销售日期</small>
+  </article>
+  <article class="summary-card">
+    <span>币种</span>
+    <strong class="summary-date">
+      {{ page.currency_codes | join(" / ") if page.currency_codes else "暂无" }}
+    </strong>
+    <small>币种之间不执行金额汇总</small>
+  </article>
+</section>
+
+{% if page.has_multiple_currencies %}
+<div class="alert alert-warning border-0 data-alert" role="alert">
+  当前结果包含多个币种，页面只展示各行原始金额，不对不同币种进行合计。
+</div>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <span class="eyebrow">Daily units</span>
+      <h2>SKU 每日销量趋势</h2>
+    </div>
+    <span class="panel-caption">图表最多展示前 8 个 SKU 编码</span>
+  </div>
+  {% if page.empty %}
+    <div class="empty-state">
+      <strong>当前时间范围没有销售数据</strong>
+      <span>请检查默认渠道配置或数据快照更新时间。</span>
+    </div>
+  {% else %}
+    <div
+      class="chart"
+      role="img"
+      aria-label="SKU 每日销量趋势图"
+      data-chart-options='{{ page.chart_options | tojson }}'
+    ></div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <span class="eyebrow">Sales records</span>
+      <h2>销售明细</h2>
+    </div>
+    <span class="panel-caption">生成时间 {{ page.generated_at }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table app-table align-middle mb-0">
+      <thead>
+        <tr>
+          <th>日期</th>
+          <th>SKU</th>
+          <th class="text-end">订单数</th>
+          <th class="text-end">销量</th>
+          <th class="text-end">销售原价</th>
+          <th class="text-end">折扣</th>
+          <th class="text-end">净销售额</th>
+          <th>币种</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in page.rows %}
+        <tr>
+          <td class="text-secondary">{{ row.sales_date }}</td>
+          <td><span class="sku-code">{{ row.sku_id }}</span></td>
+          <td class="text-end">{{ row.orders_count }}</td>
+          <td class="text-end fw-semibold">{{ row.units_sold }}</td>
+          <td class="text-end">{{ row.gross_sales }}</td>
+          <td class="text-end">{{ row.discount_amount }}</td>
+          <td class="text-end fw-semibold">{{ row.net_sales }}</td>
+          <td><span class="currency-pill">{{ row.currency_code }}</span></td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state compact">没有可展示的销售明细。</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
