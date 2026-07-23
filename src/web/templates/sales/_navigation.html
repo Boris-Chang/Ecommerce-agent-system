@@ -1,0 +1,18 @@
+<nav class="section-navigation" aria-label="销售分析子导航">
+  <a
+    class="section-navigation-link {% if active_sales_view == 'daily' %}active{% endif %}"
+    href="/sales"
+  >每日销售</a>
+  <a
+    class="section-navigation-link {% if active_sales_view == 'weekly' %}active{% endif %}"
+    href="/sales/weekly"
+  >每周销售</a>
+  <a
+    class="section-navigation-link {% if active_sales_view == 'refunds' %}active{% endif %}"
+    href="/sales/refunds"
+  >退款分析</a>
+  <a
+    class="section-navigation-link {% if active_sales_view == 'channels' %}active{% endif %}"
+    href="/sales/channels"
+  >渠道占比</a>
+</nav>

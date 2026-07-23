@@ -1,66 +1,66 @@
 {% extends "base.html" %}
 
-{% block title %}销售分析 · {{ web_title }}{% endblock %}
+{% block title %}渠道销售占比 · {{ web_title }}{% endblock %}
 
 {% block content %}
 <section class="page-heading">
   <div>
-    <span class="eyebrow">Sales intelligence</span>
-    <h1>销售分析</h1>
-    <p>查看指定渠道内的 SKU 每日销量与销售金额明细。</p>
+    <span class="eyebrow">Channel mix</span>
+    <h1>渠道销售占比</h1>
+    <p>比较查询周期内各渠道的销量和净销售额贡献，占比只在同一币种内计算。</p>
   </div>
   <div class="heading-meta">
-    <span class="meta-chip">{{ page.channel_account_id }}</span>
     <span class="meta-chip">{{ page.start_date }} — {{ page.end_date }}</span>
   </div>
 </section>
 
 {% include "sales/_navigation.html" %}
 
-<section class="summary-grid summary-grid-sales" aria-label="销售数据概况">
+<section class="summary-grid summary-grid-sales" aria-label="渠道销售概况">
   <article class="summary-card">
-    <span>数据行数</span>
-    <strong>{{ page.row_count }}</strong>
-    <small>SKU 日销售记录</small>
+    <span>渠道数量</span>
+    <strong>{{ page.channel_count }}</strong>
+    <small>不同渠道账户去重</small>
   </article>
   <article class="summary-card">
-    <span>数据截至</span>
-    <strong class="summary-date">{{ page.data_as_of }}</strong>
-    <small>最新销售日期</small>
+    <span>结果行数</span>
+    <strong>{{ page.row_count }}</strong>
+    <small>渠道账户 × 币种</small>
   </article>
   <article class="summary-card">
     <span>币种</span>
     <strong class="summary-date">
       {{ page.currency_codes | join(" / ") if page.currency_codes else "暂无" }}
     </strong>
-    <small>币种之间不执行金额汇总</small>
+    <small>每个币种分别计算 100%</small>
   </article>
 </section>
 
 {% if page.has_multiple_currencies %}
 <div class="alert alert-warning border-0 data-alert" role="alert">
-  当前结果包含多个币种，页面只展示各行原始金额，不对不同币种进行合计。
+  当前结果包含多个币种。图表中的每个“渠道 · 币种”属于各自币种的比较组，
+  不代表不同币种之间的金额可直接比较。
 </div>
 {% endif %}
 
 <section class="panel">
   <div class="panel-heading">
     <div>
-      <span class="eyebrow">Daily units</span>
-      <h2>SKU 每日销量趋势</h2>
+      <span class="eyebrow">Channel contribution</span>
+      <h2>渠道贡献占比</h2>
     </div>
-    <span class="panel-caption">图表最多展示前 8 个 SKU 编码</span>
+    <span class="panel-caption">销量占比与净销售额占比</span>
   </div>
   {% if page.empty %}
     <div class="empty-state">
-      <strong>当前时间范围没有销售数据</strong>
-      <span>请检查默认渠道配置或数据快照更新时间。</span>
+      <strong>当前时间范围没有渠道销售数据</strong>
+      <span>请检查销售分析快照更新时间。</span>
     </div>
   {% else %}
     <div
-      class="chart"
+      class="chart chart-tall"
       role="img"
-      aria-label="SKU 每日销量趋势图"
+      aria-label="渠道销售占比图"
       data-chart-options='{{ page.chart_options | tojson }}'
     ></div>
   {% endif %}
@@ -69,8 +69,8 @@
 <section class="panel">
   <div class="panel-heading">
     <div>
-      <span class="eyebrow">Sales records</span>
-      <h2>销售明细</h2>
+      <span class="eyebrow">Channel records</span>
+      <h2>渠道销售明细</h2>
     </div>
     <span class="panel-caption">生成时间 {{ page.generated_at }}</span>
   </div>
@@ -78,32 +78,32 @@
     <table class="table app-table align-middle mb-0">
       <thead>
         <tr>
-          <th>日期</th>
-          <th>SKU</th>
-          <th class="text-end">订单数</th>
+          <th>渠道账户</th>
           <th class="text-end">销量</th>
+          <th class="text-end">销量占比</th>
           <th class="text-end">销售原价</th>
           <th class="text-end">折扣</th>
           <th class="text-end">净销售额</th>
+          <th class="text-end">净销售额占比</th>
           <th>币种</th>
         </tr>
       </thead>
       <tbody>
         {% for row in page.rows %}
         <tr>
-          <td class="text-secondary">{{ row.sales_date }}</td>
-          <td><span class="sku-code">{{ row.sku_id }}</span></td>
-          <td class="text-end">{{ row.orders_count }}</td>
-          <td class="text-end fw-semibold">{{ row.units_sold }}</td>
+          <td><span class="sku-code">{{ row.channel_account_id }}</span></td>
+          <td class="text-end">{{ row.units_sold }}</td>
+          <td class="text-end fw-semibold">{{ row.units_share_pct }}</td>
           <td class="text-end">{{ row.gross_sales }}</td>
           <td class="text-end">{{ row.discount_amount }}</td>
-          <td class="text-end fw-semibold">{{ row.net_sales }}</td>
+          <td class="text-end">{{ row.net_sales }}</td>
+          <td class="text-end fw-semibold">{{ row.net_sales_share_pct }}</td>
           <td><span class="currency-pill">{{ row.currency_code }}</span></td>
         </tr>
         {% else %}
         <tr>
           <td colspan="8">
-            <div class="empty-state compact">没有可展示的销售明细。</div>
+            <div class="empty-state compact">没有可展示的渠道销售数据。</div>
           </td>
         </tr>
         {% endfor %}
