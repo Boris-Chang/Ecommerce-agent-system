@@ -2,17 +2,13 @@ from types import TracebackType
 
 from sqlalchemy import text
 
-from infrastructure.database.repositories.analytics import (
+from infrastructure.database.repositories import (
+    PostgresChannelSalesRepository,
     PostgresCustomerRepository,
     PostgresInventoryRepository,
     PostgresProfitRepository,
     PostgresSalesAnalyticsRepository,
-)
-from infrastructure.database.repositories.refunds import (
     PostgresSkuRefundRepository,
-)
-from infrastructure.database.repositories.channel_sales import (
-    PostgresChannelSalesRepository,
 )
 from infrastructure.database.session import SessionFactory
 

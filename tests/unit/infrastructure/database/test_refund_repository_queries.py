@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from infrastructure.database.repositories.refunds import (
+from infrastructure.database.repositories.sku.refunds import (
     PostgresSkuRefundRepository,
 )
 

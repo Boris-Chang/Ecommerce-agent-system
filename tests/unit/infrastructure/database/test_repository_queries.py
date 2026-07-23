@@ -3,8 +3,10 @@ from decimal import Decimal
 
 import pytest
 
-from infrastructure.database.repositories.analytics import (
+from infrastructure.database.repositories.inventory.cover import (
     PostgresInventoryRepository,
+)
+from infrastructure.database.repositories.sku.sales import (
     PostgresSalesAnalyticsRepository,
 )
 

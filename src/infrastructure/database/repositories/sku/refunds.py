@@ -3,11 +3,11 @@ from datetime import date
 from sqlalchemy.orm import Session
 
 from application.dto.sku import SkuDailyRefunds, SkuWeeklyRefunds
-from infrastructure.database.repositories.analytics import (
-    _to_models,
-    _validate_channel_account_id,
-    _validate_date_range,
-    _validate_limit,
+from infrastructure.database.repositories._common import (
+    to_models,
+    validate_channel_account_id,
+    validate_date_range,
+    validate_limit,
 )
 
 
@@ -23,8 +23,8 @@ class PostgresSkuRefundRepository:
         end_date: date,
         limit: int = 1_000,
     ) -> list[SkuDailyRefunds]:
-        _validate_date_range(start_date, end_date)
-        return _to_models(
+        validate_date_range(start_date, end_date)
+        return to_models(
             self._session,
             """
             SELECT
@@ -69,12 +69,12 @@ class PostgresSkuRefundRepository:
             LIMIT :limit
             """,
             {
-                "channel_account_id": _validate_channel_account_id(
+                "channel_account_id": validate_channel_account_id(
                     channel_account_id
                 ),
                 "start_date": start_date,
                 "end_date": end_date,
-                "limit": _validate_limit(limit),
+                "limit": validate_limit(limit),
             },
             SkuDailyRefunds,
         )
@@ -87,8 +87,8 @@ class PostgresSkuRefundRepository:
         end_date: date,
         limit: int = 10_000,
     ) -> list[SkuWeeklyRefunds]:
-        _validate_date_range(start_date, end_date)
-        return _to_models(
+        validate_date_range(start_date, end_date)
+        return to_models(
             self._session,
             """
             SELECT
@@ -133,12 +133,12 @@ class PostgresSkuRefundRepository:
             LIMIT :limit
             """,
             {
-                "channel_account_id": _validate_channel_account_id(
+                "channel_account_id": validate_channel_account_id(
                     channel_account_id
                 ),
                 "start_date": start_date,
                 "end_date": end_date,
-                "limit": _validate_limit(limit),
+                "limit": validate_limit(limit),
             },
             SkuWeeklyRefunds,
         )

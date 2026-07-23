@@ -38,7 +38,7 @@
 - `src/application/repositories/`：应用层 Repository 协议，按业务域分组
 - `src/application/services/`：确定性应用服务，按 `sku`、`channel`、`inventory` 业务域分组
 - `src/application/forecasting/sku_weekly/`：可版本管理的 SKU 周预测算法
-- `src/infrastructure/database/repositories/`：PostgreSQL Repository 实现
+- `src/infrastructure/database/repositories/`：PostgreSQL Repository 实现，同样按 `sku`、`channel`、`inventory`、`customer`、`profit` 业务域分组
 - `src/integrations/`：Shopify 等外部系统适配
 - `src/schemas/`：Agent 结构化输出契约
 - `src/models/`：DeepSeek / OpenAI 模型提供方选择

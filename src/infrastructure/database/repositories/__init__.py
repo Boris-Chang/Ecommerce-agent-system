@@ -1,13 +1,17 @@
-from infrastructure.database.repositories.analytics import (
-    PostgresCustomerRepository,
-    PostgresInventoryRepository,
-    PostgresProfitRepository,
-    PostgresSalesAnalyticsRepository,
-)
-from infrastructure.database.repositories.channel_sales import (
+from infrastructure.database.repositories.channel import (
     PostgresChannelSalesRepository,
 )
-from infrastructure.database.repositories.refunds import (
+from infrastructure.database.repositories.customer import (
+    PostgresCustomerRepository,
+)
+from infrastructure.database.repositories.inventory import (
+    PostgresInventoryRepository,
+)
+from infrastructure.database.repositories.profit import (
+    PostgresProfitRepository,
+)
+from infrastructure.database.repositories.sku import (
+    PostgresSalesAnalyticsRepository,
     PostgresSkuRefundRepository,
 )
 

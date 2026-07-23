@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from infrastructure.database.repositories.channel_sales import (
+from infrastructure.database.repositories.channel.sales import (
     PostgresChannelSalesRepository,
 )
 

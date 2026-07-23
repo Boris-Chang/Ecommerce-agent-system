@@ -3,9 +3,9 @@ from datetime import date
 from sqlalchemy.orm import Session
 
 from application.dto.channel import ChannelSalesTotals
-from infrastructure.database.repositories.analytics import (
-    _to_models,
-    _validate_date_range,
+from infrastructure.database.repositories._common import (
+    to_models,
+    validate_date_range,
 )
 
 
@@ -19,8 +19,8 @@ class PostgresChannelSalesRepository:
         start_date: date,
         end_date: date,
     ) -> list[ChannelSalesTotals]:
-        _validate_date_range(start_date, end_date)
-        return _to_models(
+        validate_date_range(start_date, end_date)
+        return to_models(
             self._session,
             """
             SELECT
