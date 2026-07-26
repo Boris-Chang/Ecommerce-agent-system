@@ -1,5 +1,6 @@
 import ast
 from pathlib import Path
+import re
 
 import pytest
 
@@ -29,7 +30,6 @@ FORBIDDEN_IMPORTS = {
     "web": {"agent_app", "agent_runtime", "integrations"},
 }
 
-
 def _top_level_imports(path: Path) -> set[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     imports: set[str] = set()
@@ -46,9 +46,9 @@ def test_layer_dependencies_point_inward() -> None:
 
     for package, forbidden in FORBIDDEN_IMPORTS.items():
         for path in sorted((SOURCE_ROOT / package).rglob("*.py")):
+            relative = path.relative_to(PROJECT_ROOT)
             invalid = sorted(_top_level_imports(path) & forbidden)
             if invalid:
-                relative = path.relative_to(PROJECT_ROOT)
                 violations.append(f"{relative}: {', '.join(invalid)}")
 
     assert violations == [], "Forbidden layer imports:\n" + "\n".join(violations)
@@ -74,18 +74,18 @@ def test_database_repositories_do_not_commit_transactions() -> None:
 def test_web_templates_do_not_contain_sql() -> None:
     template_root = SOURCE_ROOT / "web" / "templates"
     forbidden_patterns = (
-        "select ",
-        "insert ",
-        "update ",
-        "delete ",
-        "from analytics.",
-        "from inventory.",
-        "from sales.",
+        re.compile(r"(?<!<)\bselect\s"),
+        re.compile(r"\binsert\s"),
+        re.compile(r"\bupdate\s"),
+        re.compile(r"\bdelete\s"),
+        re.compile(r"\bfrom\s+analytics\."),
+        re.compile(r"\bfrom\s+inventory\."),
+        re.compile(r"\bfrom\s+sales\."),
     )
     violations: list[str] = []
     for path in sorted(template_root.rglob("*.html")):
         content = path.read_text(encoding="utf-8").lower()
-        if any(pattern in content for pattern in forbidden_patterns):
+        if any(pattern.search(content) for pattern in forbidden_patterns):
             violations.append(str(path.relative_to(PROJECT_ROOT)))
 
     assert violations == [], "SQL found in Web templates:\n" + "\n".join(

@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Agent 分析 · {{ web_title }}{% endblock %}
+
+{% block content %}
+<section class="page-heading agent-page-heading">
+  <div>
+    <span class="eyebrow">Business inspection agent</span>
+    <h1>Agent 分析</h1>
+    <p>按固定范围运行一次只读经营巡检。没有对话输入，不修改业务数据，也不创造新的指标规则。</p>
+  </div>
+</section>
+
+<section class="panel inspection-control-panel">
+  <div class="panel-heading">
+    <div>
+      <span class="eyebrow">Inspection scope</span>
+      <h2>刷新巡检结论</h2>
+    </div>
+    <span class="panel-caption">每次刷新都会生成新的 run_id 和调用日志</span>
+  </div>
+  <form class="inspection-form" method="post" action="/agent-analysis/refresh">
+    <label>
+      <span>巡检频率</span>
+      <select name="frequency" class="form-select">
+        <option value="daily" {% if page.frequency == "daily" %}selected{% endif %}>每日巡检</option>
+        <option value="weekly" {% if page.frequency == "weekly" %}selected{% endif %}>每周巡检</option>
+      </select>
+    </label>
+    <label>
+      <span>销售渠道</span>
+      <select name="channel_account_id" class="form-select">
+        {% for channel_id in page.channel_account_ids %}
+        <option
+          value="{{ channel_id }}"
+          {% if channel_id == page.channel_account_id %}selected{% endif %}
+        >{{ channel_id }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button class="btn inspection-run-button" type="submit">运行并刷新结论</button>
+  </form>
+</section>
+
+{% if not page.has_result %}
+<section class="panel">
+  <div class="empty-state agent-empty-state">
+    <strong>尚未运行巡检</strong>
+    <span>选择每日或每周巡检后运行。Agent 会读取现有销售、退款、渠道占比和库存 Service。</span>
+  </div>
+</section>
+{% else %}
+<section class="summary-grid agent-summary-grid" aria-label="Agent 巡检元数据">
+  <article class="summary-card">
+    <span>巡检频率</span>
+    <strong class="summary-text">{{ page.frequency_label }}</strong>
+    <small>{{ page.period }}</small>
+  </article>
+  <article class="summary-card accent-info">
+    <span>渠道范围</span>
+    <strong class="summary-text summary-code">{{ page.channel_account_id }}</strong>
+    <small>库存证据仍为 SKU × 仓库范围</small>
+  </article>
+  <article class="summary-card accent-warning">
+    <span>发现事项</span>
+    <strong>{{ page.findings | length }}</strong>
+    <small>全部结论必须引用证据</small>
+  </article>
+  <article class="summary-card">
+    <span>生成时间</span>
+    <strong class="summary-text">{{ page.generated_at }}</strong>
+    <small>run_id {{ page.run_id }}</small>
+  </article>
+</section>
+
+<section class="panel inspection-summary-panel">
+  <div class="panel-heading">
+    <div>
+      <span class="eyebrow">Inspection summary</span>
+      <h2>巡检摘要</h2>
+    </div>
+    {% if page.human_review_required %}
+    <span class="review-badge">需要人工复核</span>
+    {% endif %}
+  </div>
+  <p class="inspection-summary">{{ page.summary }}</p>
+</section>
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <span class="eyebrow">Findings</span>
+      <h2>分析结论与理由</h2>
+    </div>
+    <span class="panel-caption">结论 → 指标语义 → 证据 ID</span>
+  </div>
+  <div class="finding-list">
+    {% for finding in page.findings %}
+    <article class="finding-card severity-{{ finding.severity }}">
+      <div class="finding-heading">
+        <div>
+          <span class="severity-badge">{{ finding.severity_label }}</span>
+          <h3>{{ finding.title }}</h3>
+        </div>
+        <span class="evidence-reference">{{ finding.evidence_ids | join(", ") }}</span>
+      </div>
+      <p class="finding-conclusion">{{ finding.conclusion }}</p>
+      <div class="finding-reason">
+        <strong>得出结论的理由</strong>
+        <p>{{ finding.reason }}</p>
+      </div>
+      <div class="semantic-list">
+        {% for semantic in finding.metric_semantics %}
+        <span class="semantic-chip">{{ semantic }}</span>
+        {% endfor %}
+      </div>
+    </article>
+    {% else %}
+    <div class="empty-state compact">本次没有形成需要关注的结论。</div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <span class="eyebrow">Evidence trace</span>
+      <h2>证据调用链</h2>
+    </div>
+    <span class="panel-caption">run_id {{ page.run_id }}</span>
+  </div>
+  <div class="evidence-list">
+    {% for evidence in page.evidence %}
+    <article class="evidence-card">
+      <div class="evidence-card-heading">
+        <strong>{{ evidence.evidence_id }}</strong>
+        <code>{{ evidence.tool_name }}</code>
+      </div>
+      <p>{{ evidence.reason }}</p>
+      <div class="evidence-meta">
+        <span>数据截至 {{ evidence.data_as_of }}</span>
+        <span>
+          数据来源
+          {% if evidence.data_origins %}
+            {{ evidence.data_origins | join(", ") }}
+          {% else %}
+            未由 Service 暴露
+          {% endif %}
+        </span>
+      </div>
+      <ul>
+        {% for fact in evidence.facts %}
+        <li>{{ fact }}</li>
+        {% endfor %}
+      </ul>
+      {% if evidence.caveats %}
+      <ul class="evidence-caveats">
+        {% for caveat in evidence.caveats %}
+        <li>{{ caveat }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <div class="semantic-list">
+        {% for semantic in evidence.metric_semantics %}
+        <span class="semantic-chip">{{ semantic }}</span>
+        {% endfor %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+{% if page.caveats %}
+<section class="panel caveat-panel">
+  <div class="panel-heading">
+    <div>
+      <span class="eyebrow">Caveats</span>
+      <h2>数据边界与限制</h2>
+    </div>
+  </div>
+  <ul class="caveat-list">
+    {% for caveat in page.caveats %}
+    <li>{{ caveat }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}
