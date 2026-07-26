@@ -204,9 +204,22 @@ result = SkuWeeklyForecastService(unit_of_work.sales).generate(
 ```dotenv
 WEB_TITLE=Ecommerce BI
 WEB_DEFAULT_CHANNEL_ACCOUNT_ID=CA_SHOPIFY_US
+WEB_CHANNEL_ACCOUNT_IDS=CA_SHOPIFY_US,CA_AMAZON_US
 WEB_SALES_LOOKBACK_DAYS=90
 WEB_QUERY_LIMIT=500
 ```
+
+`WEB_DEFAULT_CHANNEL_ACCOUNT_ID` 决定销售页面首次打开时使用的渠道；
+`WEB_CHANNEL_ACCOUNT_IDS` 是允许在页面切换的渠道白名单。SKU 日销售、周销售和
+退款页面支持通过查询参数保留当前选择：
+
+```text
+/sales?channel_account_id=CA_AMAZON_US
+/sales/weekly?channel_account_id=CA_AMAZON_US
+/sales/refunds?channel_account_id=CA_AMAZON_US
+```
+
+不在 `WEB_CHANNEL_ACCOUNT_IDS` 中的渠道会返回 HTTP 400。
 
 开发启动：
 

@@ -1,15 +1,16 @@
+{% set channel_query = "?channel_account_id=" ~ page.channel_account_id if page.channel_account_id is defined else "" %}
 <nav class="section-navigation" aria-label="销售分析子导航">
   <a
     class="section-navigation-link {% if active_sales_view == 'daily' %}active{% endif %}"
-    href="/sales"
+    href="/sales{{ channel_query }}"
   >每日销售</a>
   <a
     class="section-navigation-link {% if active_sales_view == 'weekly' %}active{% endif %}"
-    href="/sales/weekly"
+    href="/sales/weekly{{ channel_query }}"
   >每周销售</a>
   <a
     class="section-navigation-link {% if active_sales_view == 'refunds' %}active{% endif %}"
-    href="/sales/refunds"
+    href="/sales/refunds{{ channel_query }}"
   >退款分析</a>
   <a
     class="section-navigation-link {% if active_sales_view == 'channels' %}active{% endif %}"

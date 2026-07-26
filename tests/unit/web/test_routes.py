@@ -189,6 +189,7 @@ def _build_client() -> tuple[TestClient, SimpleNamespace]:
         web_settings=WebSettings(
             WEB_TITLE="Test Ecommerce BI",
             WEB_DEFAULT_CHANNEL_ACCOUNT_ID="CA_SHOPIFY_US",
+            WEB_CHANNEL_ACCOUNT_IDS="CA_SHOPIFY_US,CA_AMAZON_US",
             WEB_SALES_LOOKBACK_DAYS=30,
             WEB_QUERY_LIMIT=100,
             WEB_DEFAULT_END_DATE="2026-07-24",
@@ -228,6 +229,51 @@ def test_weekly_sales_page_renders_application_data() -> None:
     assert call["channel_account_id"] == "CA_SHOPIFY_US"
     assert call["start_date"] == date(2026, 6, 25)
     assert call["end_date"] == date(2026, 7, 24)
+
+
+def test_sales_pages_accept_configured_amazon_channel() -> None:
+    client, repositories = _build_client()
+
+    with client:
+        daily_response = client.get(
+            "/sales?channel_account_id=CA_AMAZON_US"
+        )
+        weekly_response = client.get(
+            "/sales/weekly?channel_account_id=CA_AMAZON_US"
+        )
+        refunds_response = client.get(
+            "/sales/refunds?channel_account_id=CA_AMAZON_US"
+        )
+
+    assert daily_response.status_code == 200
+    assert weekly_response.status_code == 200
+    assert refunds_response.status_code == 200
+    assert 'data-bs-toggle="dropdown"' in daily_response.text
+    assert "CA_AMAZON_US" in daily_response.text
+    assert "channel-switcher" not in daily_response.text
+    assert repositories.sales.daily_calls[-1]["channel_account_id"] == (
+        "CA_AMAZON_US"
+    )
+    assert repositories.sales.weekly_calls[-1]["channel_account_id"] == (
+        "CA_AMAZON_US"
+    )
+    assert repositories.refunds.daily_calls[-1]["channel_account_id"] == (
+        "CA_AMAZON_US"
+    )
+    assert repositories.refunds.weekly_calls[-1]["channel_account_id"] == (
+        "CA_AMAZON_US"
+    )
+
+
+def test_sales_page_rejects_unconfigured_channel() -> None:
+    client, repositories = _build_client()
+
+    with client:
+        response = client.get("/sales?channel_account_id=CA_UNKNOWN")
+
+    assert response.status_code == 400
+    assert "Unsupported channel_account_id" in response.text
+    assert repositories.sales.daily_calls == []
 
 
 def test_refunds_page_renders_daily_and_weekly_data() -> None:
