@@ -6,9 +6,11 @@ from fastapi.responses import HTMLResponse
 from application.agents.business_inspection import (
     BusinessInspectionRequest,
     BusinessInspectionService,
+    InspectionReviewProvider,
 )
 from web.dependencies import (
     get_business_inspection_service,
+    get_inspection_review_provider,
     get_web_settings,
 )
 from web.presenters.agent_analysis import AgentAnalysisPresenter
@@ -22,12 +24,19 @@ router = APIRouter(prefix="/agent-analysis", tags=["agent-analysis"])
 @router.get("", response_class=HTMLResponse)
 def agent_analysis_page(
     request: Request,
+    review_provider: InspectionReviewProvider = Depends(
+        get_inspection_review_provider
+    ),
     settings: WebSettings = Depends(get_web_settings),
 ) -> HTMLResponse:
-    page = AgentAnalysisPresenter.empty_page(
-        frequency="daily",
+    output = review_provider.get_preview(
         channel_account_id=settings.web_default_channel_account_id,
+        generated_on=settings.web_default_end_date or date.today(),
+    )
+    page = AgentAnalysisPresenter.to_page(
+        output,
         channel_account_ids=settings.channel_account_ids,
+        review_supplement=review_provider.get_supplement(output),
     )
     return _render(request, settings, page)
 
@@ -39,6 +48,9 @@ def refresh_agent_analysis(
     channel_account_id: str = Form(...),
     service: BusinessInspectionService = Depends(
         get_business_inspection_service
+    ),
+    review_provider: InspectionReviewProvider = Depends(
+        get_inspection_review_provider
     ),
     settings: WebSettings = Depends(get_web_settings),
 ) -> HTMLResponse:
@@ -66,6 +78,7 @@ def refresh_agent_analysis(
     page = AgentAnalysisPresenter.to_page(
         output,
         channel_account_ids=settings.channel_account_ids,
+        review_supplement=review_provider.get_supplement(output),
     )
     return _render(request, settings, page)
 
@@ -84,3 +97,4 @@ def _render(
             "web_title": settings.web_title,
         },
     )
+    get_inspection_review_provider,

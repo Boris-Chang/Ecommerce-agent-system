@@ -53,7 +53,7 @@ def refunds_page(
         name="sales/refunds.html",
         context={
             "page": page,
-            "active_navigation": "sales",
+            "active_navigation": "sku",
             "active_sales_view": "refunds",
             "web_title": settings.web_title,
         },

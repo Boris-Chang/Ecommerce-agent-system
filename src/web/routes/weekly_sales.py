@@ -45,7 +45,7 @@ def weekly_sales_page(
         name="sales/weekly.html",
         context={
             "page": page,
-            "active_navigation": "sales",
+            "active_navigation": "sku",
             "active_sales_view": "weekly",
             "web_title": settings.web_title,
         },

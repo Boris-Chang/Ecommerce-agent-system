@@ -35,7 +35,7 @@ def channel_sales_page(
         name="sales/channels.html",
         context={
             "page": page,
-            "active_navigation": "sales",
+            "active_navigation": "channel",
             "active_sales_view": "channels",
             "web_title": settings.web_title,
         },

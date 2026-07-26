@@ -1,110 +1,190 @@
 {% extends "base.html" %}
 
-{% block title %}销售分析 · {{ web_title }}{% endblock %}
+{% block title %}SKU 分析 · {{ web_title }}{% endblock %}
 
 {% block content %}
 <section class="page-heading">
   <div>
-    <span class="eyebrow">Sales intelligence</span>
-    <h1>销售分析</h1>
-    <p>查看指定渠道内的 SKU 每日销量与销售金额明细。</p>
+    <span class="eyebrow">SKU intelligence</span>
+    <h1>SKU 分析</h1>
+    <p>把销量、销售额、退款原因与库存覆盖集中到同一张 SKU 经营视图。</p>
   </div>
   <div class="heading-meta">
-    {% include "sales/_channel_dropdown.html" %}
-    <span class="meta-chip">{{ page.start_date }} — {{ page.end_date }}</span>
+    <span class="meta-chip">更新于 {{ page.generated_at }}</span>
   </div>
 </section>
 
-{% include "sales/_navigation.html" %}
+<form class="business-filter-bar" action="/sales" method="get">
+  <label class="overview-filter-group">
+    <span class="overview-filter-label">销售渠道</span>
+    <select class="overview-filter-control" name="channel_account_id">
+      {% for channel_id in page.filters.channel_account_ids %}
+      <option
+        value="{{ channel_id }}"
+        {% if channel_id == page.filters.channel_account_id %}selected{% endif %}
+      >{{ channel_id }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="overview-filter-group">
+    <span class="overview-filter-label">开始日期</span>
+    <input class="overview-filter-control" type="date" name="start_date" value="{{ page.filters.start_date }}">
+  </label>
+  <label class="overview-filter-group">
+    <span class="overview-filter-label">结束日期</span>
+    <input class="overview-filter-control" type="date" name="end_date" value="{{ page.filters.end_date }}">
+  </label>
+  <label class="overview-filter-group sku-search-filter">
+    <span class="overview-filter-label">搜索 SKU</span>
+    <input
+      class="overview-filter-control"
+      type="search"
+      name="search"
+      value="{{ page.filters.search }}"
+      placeholder="输入 SKU 编码"
+    >
+  </label>
+  <input type="hidden" name="currency_code" value="{{ page.filters.currency_code }}">
+  <div class="grain-toggle" aria-label="时间粒度">
+    <button
+      type="submit"
+      name="grain"
+      value="daily"
+      class="{% if page.filters.grain == 'daily' %}active{% endif %}"
+    >日</button>
+    <button
+      type="submit"
+      name="grain"
+      value="weekly"
+      class="{% if page.filters.grain == 'weekly' %}active{% endif %}"
+    >周</button>
+  </div>
+  <button class="btn overview-apply-button" type="submit">应用筛选</button>
+</form>
 
-<section class="summary-grid summary-grid-sales" aria-label="销售数据概况">
-  <article class="summary-card">
-    <span>数据行数</span>
-    <strong>{{ page.row_count }}</strong>
-    <small>SKU 日销售记录</small>
+<section class="business-kpi-grid" aria-label="SKU 经营指标">
+  {% for item in page.kpis %}
+  <article class="overview-kpi-card accent-{{ item.accent }}">
+    <div class="overview-kpi-label">{{ item.label }}</div>
+    <strong>{{ item.value }}</strong>
+    <small>{{ item.meta }}</small>
   </article>
-  <article class="summary-card">
-    <span>数据截至</span>
-    <strong class="summary-date">{{ page.data_as_of }}</strong>
-    <small>最新销售日期</small>
-  </article>
-  <article class="summary-card">
-    <span>币种</span>
-    <strong class="summary-date">
-      {{ page.currency_codes | join(" / ") if page.currency_codes else "暂无" }}
-    </strong>
-    <small>币种之间不执行金额汇总</small>
-  </article>
+  {% endfor %}
 </section>
-
-{% if page.has_multiple_currencies %}
-<div class="alert alert-warning border-0 data-alert" role="alert">
-  当前结果包含多个币种，页面只展示各行原始金额，不对不同币种进行合计。
-</div>
-{% endif %}
 
 <section class="panel">
   <div class="panel-heading">
     <div>
-      <span class="eyebrow">Daily units</span>
-      <h2>SKU 每日销量趋势</h2>
+      <span class="eyebrow">Top SKU trend</span>
+      <h2>销量 Top 8 SKU 趋势</h2>
     </div>
-    <span class="panel-caption">图表最多展示前 8 个 SKU 编码</span>
+    <span class="panel-caption">{{ page.grain_label }} · 区间销量降序</span>
   </div>
   {% if page.empty %}
-    <div class="empty-state">
-      <strong>当前时间范围没有销售数据</strong>
-      <span>请检查默认渠道配置或数据快照更新时间。</span>
-    </div>
+  <div class="empty-state">
+    <strong>当前筛选范围没有 SKU 销售数据</strong>
+    <span>请调整渠道、日期或搜索条件。</span>
+  </div>
   {% else %}
-    <div
-      class="chart"
-      role="img"
-      aria-label="SKU 每日销量趋势图"
-      data-chart-options='{{ page.chart_options | tojson }}'
-    ></div>
+  <div
+    class="chart sku-trend-chart"
+    role="img"
+    aria-label="销量 Top 8 SKU 趋势"
+    data-chart-options='{{ page.trend_chart_options | tojson }}'
+  ></div>
   {% endif %}
 </section>
 
 <section class="panel">
   <div class="panel-heading">
     <div>
-      <span class="eyebrow">Sales records</span>
-      <h2>销售明细</h2>
+      <span class="eyebrow">SKU ranking</span>
+      <h2>SKU 排行</h2>
     </div>
-    <span class="panel-caption">生成时间 {{ page.generated_at }}</span>
+    <span class="panel-caption">点击 SKU 行展开日销量、退款件数与退款原因</span>
   </div>
   <div class="table-responsive">
-    <table class="table app-table align-middle mb-0">
+    <table class="table app-table sku-dashboard-table align-middle mb-0">
       <thead>
         <tr>
-          <th>日期</th>
           <th>SKU</th>
-          <th class="text-end">订单数</th>
           <th class="text-end">销量</th>
-          <th class="text-end">销售原价</th>
-          <th class="text-end">折扣</th>
           <th class="text-end">净销售额</th>
-          <th>币种</th>
+          <th class="text-end">较上期</th>
+          <th class="text-end">件数退款率</th>
+          <th>主要退款原因</th>
+          <th class="text-end">库存覆盖</th>
         </tr>
       </thead>
       <tbody>
         {% for row in page.rows %}
-        <tr>
-          <td class="text-secondary">{{ row.sales_date }}</td>
-          <td><span class="sku-code">{{ row.sku_id }}</span></td>
-          <td class="text-end">{{ row.orders_count }}</td>
-          <td class="text-end fw-semibold">{{ row.units_sold }}</td>
-          <td class="text-end">{{ row.gross_sales }}</td>
-          <td class="text-end">{{ row.discount_amount }}</td>
+        <tr
+          class="sku-expand-row"
+          role="button"
+          tabindex="0"
+          data-bs-toggle="collapse"
+          data-bs-target="#{{ row.collapse_id }}"
+          aria-controls="{{ row.collapse_id }}"
+          aria-expanded="false"
+        >
+          <td>
+            <span class="sku-row-toggle" aria-hidden="true">＋</span>
+            <span class="sku-code">{{ row.sku_id }}</span>
+          </td>
+          <td class="text-end">{{ row.units_sold }}</td>
           <td class="text-end fw-semibold">{{ row.net_sales }}</td>
-          <td><span class="currency-pill">{{ row.currency_code }}</span></td>
+          <td class="text-end"><span class="metric-state {{ row.sales_change_tone }}">{{ row.sales_change }}</span></td>
+          <td class="text-end"><span class="metric-state {{ row.refund_tone }}">{{ row.unit_refund_rate }}</span></td>
+          <td>{{ row.primary_refund_reason }}</td>
+          <td class="text-end"><span class="metric-state {{ row.inventory_tone }}">{{ row.inventory_cover_days }}</span></td>
+        </tr>
+        <tr class="sku-detail-row">
+          <td colspan="7" class="p-0 border-0">
+            <div class="collapse" id="{{ row.collapse_id }}">
+              <div class="sku-detail-drawer">
+                <div class="sku-detail-heading">
+                  <span>展开明细</span>
+                  <strong>{{ row.sku_id }} · {{ page.filters.channel_account_id }} · {{ page.filters.start_date }} → {{ page.filters.end_date }}</strong>
+                </div>
+                <div class="sku-detail-grid">
+                  <div class="sku-detail-card">
+                    <h3>日销量 vs 退款件数</h3>
+                    <p class="sku-detail-chart-hint">
+                      数据较多时默认展示最近 30 天，可拖动或滚轮缩放查看完整周期
+                    </p>
+                    <div
+                      class="chart sku-detail-chart"
+                      role="img"
+                      aria-label="{{ row.sku_id }} 日销量与退款件数"
+                      data-chart-options='{{ row.detail_chart_options | tojson }}'
+                    ></div>
+                  </div>
+                  <div class="sku-detail-card">
+                    <h3>退款原因构成</h3>
+                    <div class="refund-reason-list">
+                      {% for reason in row.refund_reasons %}
+                      <div>
+                        <div class="refund-reason-heading">
+                          <span>{{ reason.reason }}</span>
+                          <strong>{{ reason.share_pct }}</strong>
+                        </div>
+                        <div class="refund-reason-track">
+                          <span style="width: {{ reason.bar_width }}"></span>
+                        </div>
+                      </div>
+                      {% else %}
+                      <div class="empty-state compact">当前 SKU 没有退款原因数据。</div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="8">
-            <div class="empty-state compact">没有可展示的销售明细。</div>
-          </td>
+          <td colspan="7"><div class="empty-state compact">没有匹配的 SKU。</div></td>
         </tr>
         {% endfor %}
       </tbody>

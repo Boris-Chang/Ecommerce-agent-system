@@ -14,6 +14,7 @@ from infrastructure.database import (
 from infrastructure.llm.agent_runtime.agent_app import (
     create_business_inspection_service,
 )
+from infrastructure.mock import FixedInspectionReviewProvider
 from web.exception_handlers import register_exception_handlers
 from web.paths import STATIC_DIR, TEMPLATES_DIR
 from web.routes import (
@@ -21,6 +22,7 @@ from web.routes import (
     channel_sales,
     health,
     inventory,
+    overview,
     refunds,
     sales,
     weekly_sales,
@@ -54,11 +56,13 @@ def create_app(
         lifespan=lifespan,
     )
     app.state.web_settings = resolved_web_settings
+    app.state.inspection_review_provider = FixedInspectionReviewProvider()
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
     app.state.templates = templates
 
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
     app.include_router(health.router)
+    app.include_router(overview.router)
     app.include_router(agent_analysis.router)
     app.include_router(sales.router)
     app.include_router(weekly_sales.router)

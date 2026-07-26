@@ -4,6 +4,7 @@ from fastapi import Request
 from sqlalchemy import Engine
 
 from application.agents.business_inspection import BusinessInspectionService
+from application.agents.business_inspection import InspectionReviewProvider
 from infrastructure.database.session import SessionFactory
 from infrastructure.database.unit_of_work import ReadOnlyUnitOfWork
 from web.settings import WebSettings
@@ -25,6 +26,12 @@ def get_business_inspection_service(
     request: Request,
 ) -> BusinessInspectionService:
     return request.app.state.business_inspection_service
+
+
+def get_inspection_review_provider(
+    request: Request,
+) -> InspectionReviewProvider:
+    return request.app.state.inspection_review_provider
 
 
 def get_read_uow(request: Request) -> Iterator[ReadOnlyUnitOfWork]:

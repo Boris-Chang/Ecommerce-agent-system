@@ -161,7 +161,7 @@ class FakeInventoryRepository:
         stock_status: str | None = None,
         limit: int = 1_000,
     ) -> list[InventoryCover]:
-        if stock_status == "replenish":
+        if stock_status in {None, "replenish"}:
             return [
                 InventoryCover(
                     sku_id="SKU003",
@@ -264,13 +264,42 @@ def test_sales_page_renders_application_data() -> None:
         response = client.get("/sales")
 
     assert response.status_code == 200
-    assert "销售分析" in response.text
+    assert "SKU 分析" in response.text
     assert "SKU001" in response.text
     assert "55.00" in response.text
     call = repositories.sales.daily_calls[0]
     assert call["channel_account_id"] == "CA_SHOPIFY_US"
     assert call["start_date"] == date(2026, 6, 25)
     assert call["end_date"] == date(2026, 7, 24)
+
+
+def test_overview_page_combines_configured_channels() -> None:
+    client, repositories = _build_client()
+
+    with client:
+        response = client.get("/overview")
+
+    assert response.status_code == 200
+    assert "经营总览" in response.text
+    assert "净销售额趋势" in response.text
+    assert "SKU001" in response.text
+    assert "CA_SHOPIFY_US" in response.text
+    assert "CA_AMAZON_US" in response.text
+    assert len(repositories.sales.daily_calls) == 4
+    assert len(repositories.refunds.daily_calls) == 4
+
+
+def test_overview_page_rejects_unknown_channel() -> None:
+    client, repositories = _build_client()
+
+    with client:
+        response = client.get(
+            "/overview?channel_account_id=CA_UNKNOWN"
+        )
+
+    assert response.status_code == 400
+    assert "Unsupported channel_account_id" in response.text
+    assert repositories.sales.daily_calls == []
 
 
 def test_weekly_sales_page_renders_application_data() -> None:
@@ -306,7 +335,8 @@ def test_sales_pages_accept_configured_amazon_channel() -> None:
     assert daily_response.status_code == 200
     assert weekly_response.status_code == 200
     assert refunds_response.status_code == 200
-    assert 'data-bs-toggle="dropdown"' in daily_response.text
+    assert 'name="channel_account_id"' in daily_response.text
+    assert "<select" in daily_response.text
     assert "CA_AMAZON_US" in daily_response.text
     assert "channel-switcher" not in daily_response.text
     assert repositories.sales.daily_calls[-1]["channel_account_id"] == (
@@ -377,10 +407,9 @@ def test_inventory_page_renders_balances_and_risks() -> None:
         response = client.get("/inventory")
 
     assert response.status_code == 200
-    assert "库存分析" in response.text
-    assert "SKU002" in response.text
+    assert "库存决策" in response.text
     assert "SKU003" in response.text
-    assert "补货风险" in response.text
+    assert "补货建议" in response.text
 
 
 def test_agent_analysis_page_is_not_a_conversation() -> None:
@@ -390,9 +419,9 @@ def test_agent_analysis_page_is_not_a_conversation() -> None:
         response = client.get("/agent-analysis")
 
     assert response.status_code == 200
-    assert "Agent 分析" in response.text
-    assert "刷新巡检结论" in response.text
-    assert "尚未运行巡检" in response.text
+    assert "Agent 诊断" in response.text
+    assert "运行并刷新结论" in response.text
+    assert "结论 → 证据 → 建议动作 → 人工审核" in response.text
     assert 'name="question"' not in response.text
 
 

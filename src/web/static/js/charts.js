@@ -7,6 +7,9 @@
     (root || document)
       .querySelectorAll("[data-chart-options]")
       .forEach(function (element) {
+        if (element.offsetParent === null) {
+          return;
+        }
         var existing = echarts.getInstanceByDom(element);
         if (existing) {
           existing.dispose();
@@ -17,16 +20,18 @@
       });
   }
 
-  function resizeCharts() {
+  function resizeCharts(root) {
     if (typeof echarts === "undefined") {
       return;
     }
-    document.querySelectorAll("[data-chart-options]").forEach(function (element) {
+    (root || document)
+      .querySelectorAll("[data-chart-options]")
+      .forEach(function (element) {
       var chart = echarts.getInstanceByDom(element);
       if (chart) {
         chart.resize();
       }
-    });
+      });
   }
 
   document.addEventListener("DOMContentLoaded", function () {
@@ -44,6 +49,16 @@
       chart.dispose();
     }
   });
-  window.addEventListener("resize", resizeCharts);
+  document.body.addEventListener("shown.bs.collapse", function (event) {
+    window.requestAnimationFrame(function () {
+      initializeCharts(event.target);
+      window.requestAnimationFrame(function () {
+        resizeCharts(event.target);
+      });
+    });
+  });
+  window.addEventListener("resize", function () {
+    resizeCharts(document);
+  });
   window.initializeCharts = initializeCharts;
 })();

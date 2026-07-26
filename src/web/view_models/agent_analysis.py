@@ -2,7 +2,16 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class AgentActionViewModel:
+    action: str
+    quantity: str
+    due_date: str
+    status: str
+
+
+@dataclass(frozen=True)
 class AgentFindingViewModel:
+    tab_id: str
     title: str
     conclusion: str
     reason: str
@@ -10,6 +19,9 @@ class AgentFindingViewModel:
     severity_label: str
     metric_semantics: tuple[str, ...]
     evidence_ids: tuple[str, ...]
+    evidence: tuple["AgentEvidenceViewModel", ...]
+    review_status: str
+    actions: tuple[AgentActionViewModel, ...]
 
 
 @dataclass(frozen=True)

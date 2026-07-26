@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from application.agents.business_inspection import (
@@ -9,8 +9,13 @@ from application.agents.business_inspection import (
 from application.dto.channel import ChannelSalesShare
 from application.dto.inventory import InventoryBalance, InventoryCover
 from application.dto.sku import (
+    SkuDashboard,
+    SkuDashboardFilters,
+    SkuDashboardKpis,
+    SkuDashboardRow,
     SkuDailyRefunds,
     SkuDailySales,
+    SkuDetailPoint,
     SkuWeeklyRefunds,
     SkuWeeklySales,
 )
@@ -20,6 +25,7 @@ from web.presenters import (
     InventoryPresenter,
     RefundsPresenter,
     SalesPresenter,
+    SkuDashboardPresenter,
     WeeklySalesPresenter,
 )
 
@@ -180,6 +186,61 @@ def test_channel_sales_presenter_displays_precomputed_shares() -> None:
     assert page.rows[0].units_share_pct == "75.00%"
     assert page.rows[0].net_sales == "750.00"
     assert page.chart_options["series"][1]["data"] == [75.0]
+
+
+def test_sku_detail_chart_focuses_long_period_on_latest_30_days() -> None:
+    start_date = date(2026, 6, 1)
+    detail_points = tuple(
+        SkuDetailPoint(
+            sales_date=start_date + timedelta(days=index),
+            units_sold=index + 1,
+            refunded_units=index % 3,
+        )
+        for index in range(45)
+    )
+    dashboard = SkuDashboard(
+        filters=SkuDashboardFilters(
+            channel_account_id="CA_SHOPIFY_US",
+            start_date=start_date,
+            end_date=start_date + timedelta(days=44),
+            currency_code="USD",
+            grain="daily",
+        ),
+        generated_at=datetime(2026, 7, 24, tzinfo=timezone.utc),
+        kpis=SkuDashboardKpis(
+            active_skus=1,
+            listed_skus=1,
+            top_10_concentration_pct=Decimal("100"),
+            unit_refund_rate_pct=Decimal("2"),
+            slow_moving_skus=0,
+        ),
+        trend=(),
+        rows=(
+            SkuDashboardRow(
+                sku_id="SKU001",
+                units_sold=45,
+                net_sales=Decimal("450"),
+                unit_refund_rate_pct=Decimal("2"),
+                primary_refund_reason="damaged",
+                inventory_cover_days=30,
+                detail_points=detail_points,
+                refund_reasons=(),
+            ),
+        ),
+        data_sources=("postgresql",),
+    )
+
+    page = SkuDashboardPresenter.to_page(
+        dashboard,
+        channel_account_ids=("CA_SHOPIFY_US", "CA_AMAZON_US"),
+    )
+    chart = page.rows[0].detail_chart_options
+
+    assert [series["type"] for series in chart["series"]] == ["line", "bar"]
+    assert chart["series"][1]["barMaxWidth"] == 8
+    assert chart["dataZoom"][0]["startValue"] == 15
+    assert chart["dataZoom"][0]["endValue"] == 44
+    assert chart["xAxis"]["axisLabel"]["hideOverlap"] is True
 
 
 def test_agent_presenter_keeps_reason_semantics_and_evidence_trace() -> None:

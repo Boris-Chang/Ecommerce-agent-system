@@ -1,166 +1,180 @@
 {% extends "base.html" %}
 
-{% block title %}库存分析 · {{ web_title }}{% endblock %}
+{% block title %}库存决策 · {{ web_title }}{% endblock %}
 
 {% block content %}
 <section class="page-heading">
   <div>
-    <span class="eyebrow">Inventory intelligence</span>
-    <h1>库存分析</h1>
-    <p>按 SKU 与仓库查看当前库存组成、在途数量和库存覆盖风险。</p>
+    <span class="eyebrow">Inventory decisions</span>
+    <h1>库存决策</h1>
+    <p>从库存余额进一步回答：哪些 SKU 应该补货、哪些库存应该进入清理候选。</p>
   </div>
   <div class="heading-meta">
-    <span class="meta-chip">数据截至 {{ page.data_as_of }}</span>
+    <span class="meta-chip">更新于 {{ page.generated_at }}</span>
   </div>
 </section>
 
-<section class="summary-grid" aria-label="库存数据概况">
-  <article class="summary-card">
-    <span>库存记录</span>
-    <strong>{{ page.balance_count }}</strong>
-    <small>SKU × 仓库</small>
-  </article>
-  <article class="summary-card accent-danger">
-    <span>补货风险</span>
-    <strong>{{ page.replenishment_count }}</strong>
-    <small>需要关注的库存快照</small>
-  </article>
-  <article class="summary-card accent-warning">
-    <span>积压风险</span>
-    <strong>{{ page.overstock_count }}</strong>
-    <small>覆盖天数偏高</small>
-  </article>
-  <article class="summary-card accent-info">
-    <span>库存差异</span>
-    <strong>{{ page.warning_count }}</strong>
-    <small>可售公式不一致记录</small>
-  </article>
-</section>
-
-{% if page.warning_count %}
-<div class="alert alert-warning border-0 data-alert" role="alert">
-  部分记录不满足“在库－预占－冻结＝可售”。页面保留数据库原值，并在明细中标记差异。
-</div>
-{% endif %}
-
-<section class="panel">
-  <div class="panel-heading">
-    <div>
-      <span class="eyebrow">Inventory composition</span>
-      <h2>库存组成</h2>
-    </div>
-    <span class="panel-caption">最多展示前 20 个 SKU × 仓库记录</span>
+<form class="business-filter-bar inventory-filter-bar" action="/inventory" method="get">
+  <label class="overview-filter-group">
+    <span class="overview-filter-label">仓库</span>
+    <select class="overview-filter-control" name="warehouse_id">
+      <option value="">全部仓库</option>
+      {% for warehouse_id in page.warehouse_ids %}
+      <option value="{{ warehouse_id }}" {% if warehouse_id == page.warehouse_id %}selected{% endif %}>
+        {{ warehouse_id }}
+      </option>
+      {% endfor %}
+    </select>
+  </label>
+  <div class="overview-filter-group">
+    <span class="overview-filter-label">需求口径</span>
+    <span class="overview-filter-control overview-readonly-control">P50 周预测</span>
   </div>
-  {% if page.empty %}
-    <div class="empty-state">
-      <strong>当前没有库存余额数据</strong>
-      <span>请检查库存同步状态。</span>
-    </div>
-  {% else %}
-    <div
-      class="chart chart-tall"
-      role="img"
-      aria-label="当前库存组成图"
-      data-chart-options='{{ page.chart_options | tojson }}'
-    ></div>
-  {% endif %}
-</section>
+  <label class="overview-filter-group sku-search-filter">
+    <span class="overview-filter-label">搜索 SKU</span>
+    <input
+      class="overview-filter-control"
+      type="search"
+      name="search"
+      value="{{ page.search }}"
+      placeholder="输入 SKU 编码"
+    >
+  </label>
+  <button class="btn overview-apply-button" type="submit">应用筛选</button>
+  <span class="inventory-scope-note">库存为 SKU × 仓库口径，不按销售渠道拆分</span>
+</form>
 
-<section class="panel">
-  <div class="panel-heading">
-    <div>
-      <span class="eyebrow">Current balances</span>
-      <h2>当前库存明细</h2>
-    </div>
-    <span class="panel-caption">生成时间 {{ page.generated_at }}</span>
-  </div>
+{% if page.warnings %}
+<details class="inventory-quality-alert">
+  <summary>
+    <span class="status-dot warning-dot"></span>
+    <strong>数据质量</strong>
+    {{ page.warnings | length }} 条记录不满足“在库 − 预占 − 冻结 = 可售”，已从风险计算中排除
+    <span>查看异常</span>
+  </summary>
   <div class="table-responsive">
-    <table class="table app-table align-middle mb-0">
+    <table class="table app-table compact-table align-middle mb-0">
       <thead>
         <tr>
-          <th>SKU</th>
-          <th>仓库</th>
+          <th>SKU / 仓库</th>
           <th class="text-end">在库</th>
           <th class="text-end">预占</th>
           <th class="text-end">冻结</th>
-          <th class="text-end">可售</th>
-          <th class="text-end">在途</th>
-          <th class="text-end">公式差异</th>
-          <th>更新时间</th>
+          <th class="text-end">数据库可售</th>
+          <th class="text-end">公式可售</th>
         </tr>
       </thead>
       <tbody>
-        {% for row in page.balances %}
-        <tr class="{% if row.has_balance_warning %}warning-row{% endif %}">
-          <td><span class="sku-code">{{ row.sku_id }}</span></td>
-          <td>{{ row.warehouse_id }}</td>
+        {% for row in page.warnings %}
+        <tr>
+          <td><strong>{{ row.sku_id }}</strong><small>{{ row.warehouse_id }}</small></td>
           <td class="text-end">{{ row.on_hand_qty }}</td>
           <td class="text-end">{{ row.reserved_qty }}</td>
           <td class="text-end">{{ row.blocked_qty }}</td>
-          <td class="text-end fw-semibold">{{ row.available_qty }}</td>
-          <td class="text-end">{{ row.incoming_qty }}</td>
-          <td class="text-end">
-            {% if row.has_balance_warning %}
-              <span class="difference-pill">{{ row.available_difference }}</span>
-            {% else %}
-              <span class="text-secondary">0</span>
-            {% endif %}
-          </td>
-          <td class="text-secondary">{{ row.updated_at }}</td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="9">
-            <div class="empty-state compact">没有可展示的库存明细。</div>
-          </td>
+          <td class="text-end">{{ row.available_qty }}</td>
+          <td class="text-end"><span class="difference-pill">{{ row.expected_available_qty }}</span></td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+</details>
+{% endif %}
+
+<section class="business-kpi-grid" aria-label="库存决策指标">
+  {% for item in page.kpis %}
+  <article class="overview-kpi-card accent-{{ item.accent }}">
+    <div class="overview-kpi-label">{{ item.label }}</div>
+    <strong>{{ item.value }}</strong>
+    <small>{{ item.meta }}</small>
+  </article>
+  {% endfor %}
 </section>
 
-<div class="risk-grid">
+<section class="panel inventory-cover-panel">
+  <div class="panel-heading">
+    <div>
+      <span class="eyebrow">Coverage distribution</span>
+      <h2>库存覆盖天数分布</h2>
+    </div>
+    <span class="panel-caption">按 SKU × 仓库库存快照统计</span>
+  </div>
+  <div class="inventory-cover-bars">
+    {% for bucket in page.cover_buckets %}
+    <article class="cover-bucket tone-{{ bucket.tone }}">
+      <strong>{{ bucket.count }}</strong>
+      <div class="cover-bar-track"><span style="height: {{ bucket.height }}"></span></div>
+      <small>{{ bucket.label }}</small>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="inventory-decision-grid">
   <section class="panel">
     <div class="panel-heading">
       <div>
         <span class="eyebrow">Replenishment</span>
-        <h2>补货风险</h2>
+        <h2>补货建议</h2>
       </div>
-      <span class="risk-count danger">{{ page.replenishment_count }}</span>
+      <span class="panel-caption">按断货紧迫度排序</span>
     </div>
-    {% include "inventory/risk_table.html" with context %}
+    <div class="table-responsive">
+      <table class="table app-table replenishment-table align-middle mb-0">
+        <thead>
+          <tr>
+            <th>SKU / 仓库</th>
+            <th class="text-end">可售</th>
+            <th class="text-end">在途</th>
+            <th class="text-end">P50 周需求</th>
+            <th class="text-end">覆盖</th>
+            <th class="text-end">建议下单</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in page.replenishment_rows %}
+          <tr>
+            <td><strong>{{ row.sku_id }}</strong><small>{{ row.warehouse_id }}</small></td>
+            <td class="text-end">{{ row.available_qty }}</td>
+            <td class="text-end">{{ row.incoming_qty }}</td>
+            <td class="text-end">{{ row.forecast_weekly_units }}</td>
+            <td class="text-end"><span class="metric-state {{ row.cover_tone }}">{{ row.inventory_cover_days }}</span></td>
+            <td class="text-end fw-semibold">{{ row.recommended_order_qty }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6"><div class="empty-state compact">当前没有补货风险。</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <section class="panel">
     <div class="panel-heading">
       <div>
-        <span class="eyebrow">Overstock</span>
-        <h2>积压风险</h2>
+        <span class="eyebrow">Slow moving</span>
+        <h2>呆滞清单</h2>
       </div>
-      <span class="risk-count warning">{{ page.overstock_count }}</span>
+      <span class="panel-caption">清仓候选</span>
     </div>
     <div class="table-responsive">
       <table class="table app-table compact-table align-middle mb-0">
         <thead>
           <tr>
             <th>SKU / 仓库</th>
-            <th class="text-end">可售</th>
             <th class="text-end">覆盖天数</th>
+            <th class="text-end">占压金额</th>
           </tr>
         </thead>
         <tbody>
-          {% for row in page.overstock_risks %}
+          {% for row in page.overstock_rows %}
           <tr>
-            <td>
-              <strong>{{ row.sku_id }}</strong>
-              <small>{{ row.warehouse_id }}</small>
-            </td>
-            <td class="text-end">{{ row.available_qty }}</td>
-            <td class="text-end fw-semibold">{{ row.inventory_cover_days }}</td>
+            <td><strong>{{ row.sku_id }}</strong><small>{{ row.warehouse_id }}</small></td>
+            <td class="text-end"><span class="metric-state warning">{{ row.inventory_cover_days }}</span></td>
+            <td class="text-end">{{ row.tied_value }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="3" class="text-secondary">暂无积压风险。</td></tr>
+          <tr><td colspan="3"><div class="empty-state compact">当前没有呆滞库存。</div></td></tr>
           {% endfor %}
         </tbody>
       </table>

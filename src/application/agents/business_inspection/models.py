@@ -67,3 +67,21 @@ class BusinessInspectionOutput(FrozenModel):
     evidence: tuple[InspectionEvidence, ...]
     caveats: tuple[str, ...] = ()
     human_review_required: bool = True
+
+
+class InspectionReviewAction(FrozenModel):
+    action: str
+    quantity: str = "—"
+    due_date: str = "待确认"
+    status: str = "待人工执行"
+
+
+class InspectionFindingReview(FrozenModel):
+    finding_index: int = Field(ge=0)
+    review_status: str
+    actions: tuple[InspectionReviewAction, ...] = ()
+
+
+class InspectionReviewSupplement(FrozenModel):
+    findings: tuple[InspectionFindingReview, ...]
+    data_source: str

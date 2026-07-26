@@ -27,6 +27,12 @@ class WebSettings(BaseSettings):
         le=10_000,
         validation_alias="WEB_QUERY_LIMIT",
     )
+    web_overview_query_limit: int = Field(
+        default=10_000,
+        ge=1,
+        le=10_000,
+        validation_alias="WEB_OVERVIEW_QUERY_LIMIT",
+    )
     web_default_end_date: date | None = Field(
         default=None,
         validation_alias="WEB_DEFAULT_END_DATE",
