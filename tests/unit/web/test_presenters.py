@@ -1,6 +1,11 @@
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
+from application.agents.business_inspection import (
+    BusinessInspectionFinding,
+    BusinessInspectionOutput,
+    InspectionEvidence,
+)
 from application.dto.channel import ChannelSalesShare
 from application.dto.inventory import InventoryBalance, InventoryCover
 from application.dto.sku import (
@@ -10,6 +15,7 @@ from application.dto.sku import (
     SkuWeeklySales,
 )
 from web.presenters import (
+    AgentAnalysisPresenter,
     ChannelSalesSharePresenter,
     InventoryPresenter,
     RefundsPresenter,
@@ -174,3 +180,46 @@ def test_channel_sales_presenter_displays_precomputed_shares() -> None:
     assert page.rows[0].units_share_pct == "75.00%"
     assert page.rows[0].net_sales == "750.00"
     assert page.chart_options["series"][1]["data"] == [75.0]
+
+
+def test_agent_presenter_keeps_reason_semantics_and_evidence_trace() -> None:
+    output = BusinessInspectionOutput(
+        run_id="run-123",
+        frequency="daily",
+        channel_account_id="CA_SHOPIFY_US",
+        start_date=date(2026, 7, 24),
+        end_date=date(2026, 7, 24),
+        generated_at=datetime(2026, 7, 24, tzinfo=timezone.utc),
+        summary="巡检完成。",
+        findings=(
+            BusinessInspectionFinding(
+                title="销售事实",
+                conclusion="SKU001 有销售记录。",
+                reason="采用 sku_daily_sales 并引用 E1。",
+                severity="info",
+                metric_semantic_ids=("sku_daily_sales",),
+                evidence_ids=("E1",),
+            ),
+        ),
+        evidence=(
+            InspectionEvidence(
+                evidence_id="E1",
+                tool_name="read_sku_sales_snapshot",
+                metric_semantic_ids=("sku_daily_sales",),
+                reason="SkuSalesService 返回数据。",
+                facts=("SKU001 units_sold=3",),
+            ),
+        ),
+    )
+
+    page = AgentAnalysisPresenter.to_page(
+        output,
+        channel_account_ids=("CA_SHOPIFY_US", "CA_AMAZON_US"),
+    )
+
+    assert page.has_result is True
+    assert page.findings[0].reason.endswith("引用 E1。")
+    assert page.findings[0].metric_semantics == (
+        "sku_daily_sales · SKU 每日销售",
+    )
+    assert page.evidence[0].tool_name == "read_sku_sales_snapshot"

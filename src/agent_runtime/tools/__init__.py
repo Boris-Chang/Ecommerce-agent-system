@@ -1,1 +1,0 @@
-"""Shopify Agent tools package."""

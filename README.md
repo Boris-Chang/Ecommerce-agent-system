@@ -1,39 +1,35 @@
-# Shopify Store Ops Agent
+# Ecommerce Analytics & Inspection Agent
 
-这是一个基于 Python、LangChain 和 Shopify Admin GraphQL API 的店铺运营 Agent 项目。当前阶段聚焦只读分析：读取店铺、商品和订单数据，生成运营诊断、任务清单和商品页优化草稿。
+这是一个基于 Python、FastAPI、LangChain 和 PostgreSQL 的只读电商经营分析项目。Web 提供销售、库存和 Agent 巡检三个分析入口。
 
-项目不再提供 CLI、关键词路由、进程内 latest 状态或 JSON / Markdown 文件导出。上层 API、任务 Worker 或其他服务通过 Python 接口创建和调用 Agent，并自行管理会话与持久化。
+当前 Agent 是无对话、无记忆的经营巡检 Agent。每次每日或每周巡检都使用固定范围调用现有 Application Service，生成一份新的结构化结论；它不接收自然语言问题，也不创建新的确定性指标或业务规则。
 
 ## 当前能力
 
-- 检查 Shopify 店铺连接和基础信息
-- 获取商品列表与单个商品详情
-- 获取最近订单并汇总热卖商品
-- 诊断商品页、SEO、库存和近期销售风险
-- 生成运营任务清单
-- 生成符合 `ProductPageDraftOutput` 的商品页优化草稿
 - 按渠道查询 SKU 日/周销量、销售额和退款数据
 - 按币种计算各渠道销量占比与净销售额占比
 - 按 SKU、仓库查询在库、预占、冻结、可售和在途库存
 - 查询库存覆盖、补货风险、积压风险、客户 LTV 和月度利润
 - 使用版本化 Python 模型生成渠道级 SKU 周销量预测
+- 运行每日或每周经营巡检，输出具体理由、统一指标语义和证据引用
 
 ## 安全边界
 
-当前 Shopify 工具只读取数据，不会自动修改店铺：
+当前 Web 和巡检 Agent 只读取数据：
 
-- 不修改商品标题、描述、SEO、价格或库存
-- 不删除商品
-- 不创建折扣
-- 不发送营销邮件
-- 商品页优化内容只作为人工审核草稿
+- 不修改订单、商品、价格或库存
+- 不执行采购、补货、调价或营销动作
+- 不计算现有 Application Service 尚未提供的退款率、利润率或 LTV 结论
+- 不执行跨币种汇总
+- Agent 结论必须人工复核
 
 ## 分层结构
 
 项目采用“接口层—应用层—基础设施层”的依赖方向：
 
-- `src/agent_app/`：面向 API、Worker 和测试适配器的可编程 Agent 入口
-- `src/agent_runtime/`：Agent 创建、工具编排和运行时逻辑
+- `src/infrastructure/llm/agent_runtime/agent_app/`：面向 Web、Worker 和测试适配器的 Agent 组合入口
+- `src/infrastructure/llm/agent_runtime/`：LangChain 巡检 Agent、只读工具编排和运行时适配
+- `src/application/agents/business_inspection/`：巡检用例、输出契约、Runner Port 和已有指标语义目录
 - `src/application/dto/`：不可变只读 DTO，按 `sku`、`channel`、`inventory`、`customer`、`profit` 业务域分组
 - `src/application/repositories/`：应用层 Repository 协议，按业务域分组
 - `src/application/services/`：确定性应用服务，按 `sku`、`channel`、`inventory` 业务域分组
@@ -41,8 +37,7 @@
 - `src/infrastructure/database/repositories/`：PostgreSQL Repository 实现，同样按 `sku`、`channel`、`inventory`、`customer`、`profit` 业务域分组
 - `src/web/`：FastAPI、Jinja2、Presenter、ViewModel、页面模板与静态资源
 - `src/integrations/`：Shopify 等外部系统适配
-- `src/schemas/`：Agent 结构化输出契约
-- `src/models/`：DeepSeek / OpenAI 模型提供方选择
+- `src/infrastructure/llm/models/llm_provider.py`：DeepSeek / OpenAI LLM 提供方选择
 
 `application` 不依赖 `infrastructure`；基础设施实现应用层声明的协议。只读查询由 `ReadOnlyUnitOfWork` 管理事务，退出上下文时统一回滚并关闭连接。应用结果由调用方持有，不写入模块级全局状态。
 
@@ -56,7 +51,7 @@ python -m venv .venv
 copy .env.example .env
 ```
 
-然后编辑 `.env`，填入模型、Shopify Admin API 和只读 PostgreSQL 应用账号配置。
+然后编辑 `.env`，填入 LLM 和只读 PostgreSQL 应用账号配置。
 
 PowerShell 如需激活虚拟环境：
 
@@ -185,6 +180,73 @@ result = SkuWeeklyForecastService(unit_of_work.sales).generate(
 )
 ```
 
+## 经营巡检 Agent
+
+巡检 Agent 只将以下现有 Application Service 封装成四个只读工具：
+
+| Agent Tool | 现有 Application Service | 已有指标语义 |
+| --- | --- | --- |
+| `read_sku_sales_snapshot` | `SkuSalesService` | `sku_daily_sales` / `sku_weekly_sales` |
+| `read_sku_refund_snapshot` | `SkuRefundService` | `sku_daily_refunds` / `sku_weekly_refunds` |
+| `read_channel_sales_share` | `ChannelSalesShareService` | `channel_sales_share` |
+| `read_inventory_snapshot` | `InventoryBalanceService`、`InventoryRiskService` | `current_inventory_balance`、`inventory_cover_risk` |
+
+指标语义目录只描述这些 Service 已经存在的确定性计算和数据粒度，不新增趋势、阈值、退款率、利润率或跨域匹配规则。每个工具调用独立创建 `ReadOnlyUnitOfWork`，完成查询后回滚并关闭数据库 Session。
+
+每次巡检都有唯一 `run_id`。Application Service 会校验：
+
+- 每条结论必须包含具体理由
+- 每条结论必须引用存在的 `evidence_id`
+- 每条结论和证据必须引用已登记的 `metric_semantic_id`
+- 证据语义必须能够支持结论声明的语义
+- LangChain Runtime 必须实际调用全部四个工具
+- Agent 不能把未调用的工具写入证据
+
+日志事件包括：
+
+```text
+business_inspection_started
+business_inspection_tool_started
+business_inspection_tool_completed
+business_inspection_runner_completed
+business_inspection_completed
+```
+
+所有事件都带 `run_id`；工具完成日志还包括工具名、返回行数和耗时。模型密钥和数据库凭据不会写入日志。
+
+完整调用链：
+
+```text
+Web / 外部任务调度器
+→ BusinessInspectionService
+→ BusinessInspectionRunner Port
+→ LangChainBusinessInspectionRunner
+→ 四个只读 Agent Tool
+→ 每工具一个 ReadOnlyUnitOfWork
+→ 现有 Application Service
+→ Application Repository Protocol
+→ PostgreSQL Repository
+→ PostgreSQL 业务表或分析快照
+→ Tool 证据（指标语义、数据截至时间、数据来源、限制）
+→ LangChain 结构化输出
+→ Application 证据引用校验
+→ Presenter / Web 页面
+```
+
+LLM 配置：
+
+```dotenv
+LLM_PROVIDER=deepseek
+LLM_MODEL=deepseek-chat
+DEEPSEEK_API_KEY=your-deepseek-api-key
+```
+
+也可以设置 `LLM_PROVIDER=openai` 和 `OPENAI_API_KEY`。为了兼容已有本地 `.env`，代码仍会读取旧的 `AGENT_PROVIDER`、`AGENT_MODEL`，但新配置应使用 `LLM_*`。
+
+巡检 Agent 需要同时使用多工具调用和结构化输出，因此 DeepSeek 默认使用
+`deepseek-chat`。当前 DeepSeek V4 Pro/Flash 的 Thinking 模式会拒绝该流程所需的
+强制 `tool_choice`，不能直接作为本巡检 Agent 的默认模型。
+
 ## Web Dashboard
 
 第一阶段 Web 层采用 FastAPI + Jinja2 + HTMX + Bootstrap 5 + Apache ECharts，提供：
@@ -194,6 +256,7 @@ result = SkuWeeklyForecastService(unit_of_work.sales).generate(
 - `/sales/refunds`：默认渠道的 SKU 日退款和周退款明细
 - `/sales/channels`：各渠道在同一币种内的销量占比和净销售额占比
 - `/inventory`：当前库存组成、在途库存、补货风险、积压风险和库存公式差异
+- `/agent-analysis`：无对话的每日/每周经营巡检与可追溯分析结论
 - `/health/live`：进程存活检查
 - `/health/ready`：PostgreSQL 只读连接检查
 
@@ -232,6 +295,7 @@ WEB_QUERY_LIMIT=500
 ```text
 http://localhost:8000/sales
 http://localhost:8000/inventory
+http://localhost:8000/agent-analysis
 ```
 
 Application Service 不依赖 Web 或基础设施 UoW。FastAPI 请求依赖负责创建 `ReadOnlyUnitOfWork`，再将其中的 Repository 实例传给 Application Service。模板只接收 Presenter 生成的 ViewModel，不执行 SQL 或业务指标计算。
@@ -263,6 +327,7 @@ Application Service 不依赖 Web 或基础设施 UoW。FastAPI 请求依赖负�
 - `/sales/channels`：`ChannelSalesShareService → PostgresChannelSalesRepository → analytics.v_sku_daily_sales`
 - `/inventory`：`InventoryBalanceService → PostgresInventoryRepository → inventory.inventory_balances`
 - `/inventory`：`InventoryRiskService → PostgresInventoryRepository → analytics.v_inventory_cover`
+- `/agent-analysis`：`BusinessInspectionService → LangChain Runner → 四个只读 Tool → 上述五个现有 Application Service → PostgreSQL`
 
 SKU 周预测已经具备 Application Service 与 PostgreSQL Repository，但尚未
 接入 Web Route、Presenter 和页面。客户 LTV、SKU 月度利润和渠道月度利润当前
@@ -293,38 +358,45 @@ PostgreSQL/psycopg 下会因可选筛选参数缺少显式类型转换而触发
 
 表级 live validator 通过后，还必须按照 `db/migrations/README.md`，使用同一版本的 `pg_dump --schema-only` 对 reference database 与 live database 做完整结构对比。两道验证均通过后，才允许手工执行 Alembic baseline stamp。应用不会自动执行迁移。
 
-## 可编程调用
+## 可编程巡检
 
-项目不提供命令行对话入口。上层服务直接传入消息：
-
-```python
-from agent_app import create_store_ops_agent, invoke_store_ops_agent
-
-agent = create_store_ops_agent()
-result = invoke_store_ops_agent(
-    [{"role": "user", "content": "生成店铺运营诊断"}],
-    agent=agent,
-)
-```
-
-商品页草稿接口会负责商品 ID 标准化和结构校验：
+项目不提供命令行对话入口。Web、外部定时任务或 Worker 使用同一个无对话巡检用例：
 
 ```python
-from agent_app import create_product_page_draft_agent, invoke_product_page_draft_agent
+from datetime import date
 
-agent = create_product_page_draft_agent()
-draft = invoke_product_page_draft_agent(
-    "gid://shopify/Product/1234567890",
-    agent=agent,
+from application.agents.business_inspection import BusinessInspectionRequest
+from infrastructure.database import (
+    create_database_engine,
+    create_session_factory,
 )
+from infrastructure.llm.agent_runtime.agent_app import (
+    create_business_inspection_service,
+)
+
+engine = create_database_engine()
+service = create_business_inspection_service(
+    create_session_factory(engine)
+)
+result = service.run(
+    BusinessInspectionRequest(
+        frequency="daily",
+        channel_account_id="CA_SHOPIFY_US",
+        start_date=date(2026, 7, 24),
+        end_date=date(2026, 7, 24),
+    )
+)
+print(result.model_dump_json(indent=2))
 ```
+
+该调用每次只生成一份结果，不保存会话记忆。当前 Web 也不持久化历史巡检；如需每天或每周自动运行并保留历史，应由外部任务调度器调用该接口，并由独立结果存储适配器负责持久化。
 
 ## 启动检查
 
-没有 CLI 后，“正常启动”定义为项目安装成功、公共接口可导入、Agent 可通过工厂创建。快速检查公共接口：
+“正常启动”定义为项目安装成功、公共接口可导入、Web 可以创建巡检服务。快速检查公共接口：
 
 ```powershell
-.\.venv\Scripts\python -c "from agent_app import create_store_ops_agent, create_product_page_draft_agent; print('agent_app import: OK')"
+.\.venv\Scripts\python -c "from infrastructure.llm.agent_runtime.agent_app import create_business_inspection_service; from infrastructure.llm.models.llm_provider import build_llm; print('inspection imports: OK')"
 ```
 
 ## 测试

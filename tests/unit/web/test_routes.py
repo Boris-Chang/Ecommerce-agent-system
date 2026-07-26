@@ -1,10 +1,17 @@
 from collections.abc import Iterator
 from datetime import date, datetime, timezone
 from decimal import Decimal
+import logging
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
+from application.agents.business_inspection import (
+    BusinessInspectionFinding,
+    BusinessInspectionOutput,
+    BusinessInspectionRequest,
+    InspectionEvidence,
+)
 from application.dto.channel import ChannelSalesTotals
 from application.dto.inventory import InventoryBalance, InventoryCover
 from application.dto.sku import (
@@ -15,7 +22,10 @@ from application.dto.sku import (
 )
 from core.settings import DatabaseSettings
 from web.bootstrap import create_app
-from web.dependencies import get_read_uow
+from web.dependencies import (
+    get_business_inspection_service,
+    get_read_uow,
+)
 from web.settings import WebSettings
 
 
@@ -165,16 +175,61 @@ class FakeInventoryRepository:
         return []
 
 
+class FakeBusinessInspectionService:
+    def __init__(self) -> None:
+        self.calls: list[BusinessInspectionRequest] = []
+
+    def run(
+        self,
+        request: BusinessInspectionRequest,
+    ) -> BusinessInspectionOutput:
+        self.calls.append(request)
+        return BusinessInspectionOutput(
+            run_id="run-web-123",
+            frequency=request.frequency,
+            channel_account_id=request.channel_account_id,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            generated_at=datetime(2026, 7, 24, tzinfo=timezone.utc),
+            summary="销售与库存巡检完成。",
+            findings=(
+                BusinessInspectionFinding(
+                    title="库存覆盖风险",
+                    conclusion="SKU003 需要人工关注。",
+                    reason=(
+                        "采用 inventory_cover_risk 统一指标语义，"
+                        "已有快照标记为 replenish。"
+                    ),
+                    severity="high",
+                    metric_semantic_ids=("inventory_cover_risk",),
+                    evidence_ids=("E1",),
+                ),
+            ),
+            evidence=(
+                InspectionEvidence(
+                    evidence_id="E1",
+                    tool_name="read_inventory_snapshot",
+                    metric_semantic_ids=("inventory_cover_risk",),
+                    reason="InventoryRiskService 返回 replenish 快照。",
+                    facts=("SKU003 stock_status=replenish",),
+                ),
+            ),
+            caveats=("库存是 SKU × 仓库范围，不按销售渠道拆分。",),
+        )
+
+
 def _build_client() -> tuple[TestClient, SimpleNamespace]:
     sales = FakeSalesRepository()
     refunds = FakeRefundRepository()
     channel_sales = FakeChannelSalesRepository()
     inventory = FakeInventoryRepository()
+    inspection_service = FakeBusinessInspectionService()
     unit_of_work = SimpleNamespace(
         sales=sales,
         refunds=refunds,
         channel_sales=channel_sales,
         inventory=inventory,
+        inspection_service=inspection_service,
     )
 
     def override_uow() -> Iterator[SimpleNamespace]:
@@ -196,6 +251,9 @@ def _build_client() -> tuple[TestClient, SimpleNamespace]:
         ),
     )
     app.dependency_overrides[get_read_uow] = override_uow
+    app.dependency_overrides[get_business_inspection_service] = (
+        lambda: inspection_service
+    )
     return TestClient(app), unit_of_work
 
 
@@ -323,6 +381,56 @@ def test_inventory_page_renders_balances_and_risks() -> None:
     assert "SKU002" in response.text
     assert "SKU003" in response.text
     assert "补货风险" in response.text
+
+
+def test_agent_analysis_page_is_not_a_conversation() -> None:
+    client, _ = _build_client()
+
+    with client:
+        response = client.get("/agent-analysis")
+
+    assert response.status_code == 200
+    assert "Agent 分析" in response.text
+    assert "刷新巡检结论" in response.text
+    assert "尚未运行巡检" in response.text
+    assert 'name="question"' not in response.text
+
+
+def test_web_bootstrap_enables_inspection_info_logs() -> None:
+    client, _ = _build_client()
+
+    with client:
+        assert logging.getLogger(
+            "application.agents.business_inspection"
+        ).getEffectiveLevel() == logging.INFO
+        assert logging.getLogger(
+            "infrastructure.llm"
+        ).getEffectiveLevel() == logging.INFO
+
+
+def test_weekly_agent_refresh_renders_traceable_result() -> None:
+    client, dependencies = _build_client()
+
+    with client:
+        response = client.post(
+            "/agent-analysis/refresh",
+            data={
+                "frequency": "weekly",
+                "channel_account_id": "CA_AMAZON_US",
+            },
+        )
+
+    assert response.status_code == 200
+    assert "每周巡检" in response.text
+    assert "销售与库存巡检完成" in response.text
+    assert "inventory_cover_risk" in response.text
+    assert "read_inventory_snapshot" in response.text
+    assert "run-web-123" in response.text
+    call = dependencies.inspection_service.calls[0]
+    assert call.frequency == "weekly"
+    assert call.channel_account_id == "CA_AMAZON_US"
+    assert call.start_date == date(2026, 7, 18)
+    assert call.end_date == date(2026, 7, 24)
 
 
 def test_live_health_and_not_found_pages() -> None:

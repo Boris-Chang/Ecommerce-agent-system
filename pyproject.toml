@@ -1,7 +1,7 @@
 [project]
 name = "python-langchain-agent"
 version = "0.1.0"
-description = "A Shopify store operations assistant built with Python and LangChain."
+description = "A read-only ecommerce analytics and inspection Agent."
 requires-python = ">=3.10"
 dependencies = [
     "alembic>=1.14",
