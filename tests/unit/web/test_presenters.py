@@ -41,6 +41,7 @@ def test_sales_presenter_builds_chart_and_currency_warning() -> None:
     page = SalesPresenter.to_page(
         rows=rows,
         channel_account_id="CA_SHOPIFY_US",
+        channel_account_ids=("CA_SHOPIFY_US", "CA_AMAZON_US"),
         start_date=date(2026, 7, 1),
         end_date=date(2026, 7, 31),
         generated_at=datetime(2026, 7, 24, tzinfo=timezone.utc),
@@ -102,6 +103,7 @@ def test_weekly_sales_presenter_builds_weekly_chart() -> None:
     page = WeeklySalesPresenter.to_page(
         rows=rows,
         channel_account_id="CA_SHOPIFY_US",
+        channel_account_ids=("CA_SHOPIFY_US", "CA_AMAZON_US"),
         start_date=date(2026, 7, 1),
         end_date=date(2026, 7, 31),
         generated_at=datetime(2026, 7, 24, tzinfo=timezone.utc),
@@ -134,6 +136,7 @@ def test_refunds_presenter_keeps_daily_and_weekly_grains_separate() -> None:
         daily_rows=[daily],
         weekly_rows=[weekly],
         channel_account_id="CA_SHOPIFY_US",
+        channel_account_ids=("CA_SHOPIFY_US", "CA_AMAZON_US"),
         start_date=date(2026, 7, 1),
         end_date=date(2026, 7, 31),
         generated_at=datetime(2026, 7, 24, tzinfo=timezone.utc),

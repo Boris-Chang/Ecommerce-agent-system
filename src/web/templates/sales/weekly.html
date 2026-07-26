@@ -10,7 +10,7 @@
     <p>按自然周查看指定渠道内的 SKU 销量、订单量和销售额。</p>
   </div>
   <div class="heading-meta">
-    <span class="meta-chip">{{ page.channel_account_id }}</span>
+    {% include "sales/_channel_dropdown.html" %}
     <span class="meta-chip">{{ page.start_date }} — {{ page.end_date }}</span>
   </div>
 </section>

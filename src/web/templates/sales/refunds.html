@@ -10,7 +10,7 @@
     <p>查看指定渠道内按日和按自然周汇总的 SKU 退款数量与退款金额。</p>
   </div>
   <div class="heading-meta">
-    <span class="meta-chip">{{ page.channel_account_id }}</span>
+    {% include "sales/_channel_dropdown.html" %}
     <span class="meta-chip">{{ page.start_date }} — {{ page.end_date }}</span>
   </div>
 </section>

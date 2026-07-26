@@ -16,6 +16,7 @@ class SalesTableRowViewModel:
 @dataclass(frozen=True)
 class SalesPageViewModel:
     channel_account_id: str
+    channel_account_ids: tuple[str, ...]
     start_date: str
     end_date: str
     generated_at: str

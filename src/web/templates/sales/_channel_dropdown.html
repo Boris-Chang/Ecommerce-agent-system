@@ -1,0 +1,28 @@
+<div class="dropdown channel-dropdown">
+  <button
+    class="btn channel-dropdown-button dropdown-toggle"
+    type="button"
+    data-bs-toggle="dropdown"
+    aria-expanded="false"
+    aria-label="选择销售渠道，当前为 {{ page.channel_account_id }}"
+  >
+    <span>销售渠道</span>
+    <strong>{{ page.channel_account_id }}</strong>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end channel-dropdown-menu">
+    {% for channel_id in page.channel_account_ids %}
+    <li>
+      <a
+        class="dropdown-item channel-dropdown-item {% if channel_id == page.channel_account_id %}active{% endif %}"
+        href="{{ request.url.path }}?channel_account_id={{ channel_id }}"
+        {% if channel_id == page.channel_account_id %}aria-current="page"{% endif %}
+      >
+        <span class="channel-check" aria-hidden="true">
+          {% if channel_id == page.channel_account_id %}✓{% endif %}
+        </span>
+        <span>{{ channel_id }}</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</div>

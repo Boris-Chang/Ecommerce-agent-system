@@ -19,6 +19,7 @@ class SalesPresenter:
         *,
         rows: Sequence[SkuDailySales],
         channel_account_id: str,
+        channel_account_ids: Sequence[str],
         start_date: date,
         end_date: date,
         generated_at: datetime | None = None,
@@ -90,6 +91,7 @@ class SalesPresenter:
         )
         return SalesPageViewModel(
             channel_account_id=channel_account_id,
+            channel_account_ids=tuple(channel_account_ids),
             start_date=start_date.isoformat(),
             end_date=end_date.isoformat(),
             generated_at=resolved_generated_at.astimezone().strftime(
