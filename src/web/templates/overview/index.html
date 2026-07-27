@@ -14,163 +14,89 @@
   </div>
 </section>
 
-<form class="overview-filter-bar" action="/overview" method="get">
-  <div class="overview-filter-group channel-filter-group">
-    <span class="overview-filter-label">渠道</span>
-    <div class="dropdown">
-      <button
-        class="btn overview-filter-control dropdown-toggle"
-        type="button"
-        data-bs-toggle="dropdown"
-        data-bs-auto-close="outside"
-        aria-expanded="false"
-      >
-        已选 {{ page.filters.channel_account_ids | length }} 个渠道
-      </button>
-      <div class="dropdown-menu overview-channel-menu">
-        <strong>选择分析渠道</strong>
-        <small>至少保留一个渠道</small>
-        {% for channel_id in page.filters.available_channel_account_ids %}
-        <label class="overview-channel-option">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            name="channel_account_id"
-            value="{{ channel_id }}"
-            {% if channel_id in page.filters.channel_account_ids %}checked{% endif %}
-          >
-          <span>{{ channel_id }}</span>
-        </label>
-        {% endfor %}
-      </div>
-    </div>
-    <div class="selected-channel-list" aria-label="当前选择的渠道">
+<form class="business-filter-bar" action="/overview" method="get">
+  <label class="overview-filter-group">
+    <span class="overview-filter-label">销售渠道</span>
+    <select class="overview-filter-control" name="channel_account_id">
       {% for channel_id in page.filters.channel_account_ids %}
-      <span>{{ channel_id }}</span>
+      <option
+        value="{{ channel_id }}"
+        {% if channel_id == page.filters.channel_account_id %}selected{% endif %}
+      >{{ channel_id }}</option>
       {% endfor %}
-    </div>
-  </div>
-
-  <div class="overview-filter-divider"></div>
-
-  <label class="overview-filter-group">
-    <span class="overview-filter-label">开始日期</span>
-    <input
-      class="overview-filter-control"
-      type="date"
-      name="start_date"
-      value="{{ page.filters.start_date }}"
-    >
+    </select>
   </label>
-  <label class="overview-filter-group">
-    <span class="overview-filter-label">结束日期</span>
-    <input
-      class="overview-filter-control"
-      type="date"
-      name="end_date"
-      value="{{ page.filters.end_date }}"
-    >
-  </label>
-  <div class="overview-filter-group">
-    <span class="overview-filter-label">币种</span>
-    <span class="overview-filter-control overview-readonly-control">
-      {{ page.filters.currency_code }}
-    </span>
-    <input
-      type="hidden"
-      name="currency_code"
-      value="{{ page.filters.currency_code }}"
-    >
-  </div>
-  <div class="overview-filter-group comparison-filter">
-    <span class="overview-filter-label">对比</span>
-    <span class="overview-filter-control overview-readonly-control">
-      上一周期
-    </span>
-  </div>
+  <input type="hidden" name="currency_code" value="{{ page.filters.currency_code }}">
   <button class="btn overview-apply-button" type="submit">应用筛选</button>
 </form>
 
+<div class="overview-period-heading">
+  <div>
+    <span class="eyebrow">Daily snapshot</span>
+    <h2>当日经营数据</h2>
+  </div>
+  <span class="panel-caption">{{ page.filters.day }} · {{ page.filters.channel_account_id }}</span>
+</div>
 <section class="overview-kpi-grid" aria-label="核心经营指标">
-  {% for item in page.kpis %}
+  {% for item in page.daily_kpis %}
   <article class="overview-kpi-card accent-{{ item.accent }}">
     <div class="overview-kpi-label">{{ item.label }}</div>
     <strong>{{ item.value }}</strong>
-    <div class="overview-kpi-change {{ item.change_tone }}">
-      {{ item.change }}
-    </div>
     <small>{{ item.meta }}</small>
   </article>
   {% endfor %}
 </section>
 
-<div class="overview-primary-grid">
-  <section class="panel overview-chart-panel">
-    <div class="panel-heading">
-      <div>
-        <span class="eyebrow">Net sales trend</span>
-        <h2>净销售额趋势</h2>
-      </div>
-      <span class="panel-caption">按渠道堆叠 · 当前筛选周期</span>
-    </div>
-    {% if page.empty %}
-    <div class="empty-state">
-      <strong>当前筛选范围没有销售数据</strong>
-      <span>请调整渠道或日期范围。</span>
-    </div>
-    {% else %}
-    <div
-      class="chart overview-sales-chart"
-      role="img"
-      aria-label="按渠道堆叠的净销售额趋势图"
-      data-chart-options='{{ page.sales_chart_options | tojson }}'
-    ></div>
-    {% endif %}
-  </section>
-
-  <section class="panel channel-contribution-panel">
-    <div class="panel-heading">
-      <div>
-        <span class="eyebrow">Channel contribution</span>
-        <h2>渠道贡献</h2>
-      </div>
-      <a class="panel-link" href="/sales/channels">查看渠道页</a>
-    </div>
-    <div class="channel-contribution-list">
-      {% for channel in page.channels %}
-      <article class="channel-contribution-item">
-        <div class="channel-contribution-heading">
-          <strong>{{ channel.channel_account_id }}</strong>
-          <span>{{ channel.net_sales }} · {{ channel.net_sales_share_pct }}</span>
-        </div>
-        <div class="contribution-track" aria-hidden="true">
-          <span style="width: {{ channel.bar_width }}"></span>
-        </div>
-        <dl>
-          <div>
-            <dt>销量占比</dt>
-            <dd>{{ channel.units_share_pct }}</dd>
-          </div>
-          <div>
-            <dt>毛利占比</dt>
-            <dd>{{ channel.gross_profit_share_pct }}</dd>
-          </div>
-        </dl>
-      </article>
-      {% else %}
-      <div class="empty-state compact">暂无渠道贡献数据。</div>
-      {% endfor %}
-    </div>
-  </section>
+<div class="overview-period-heading">
+  <div>
+    <span class="eyebrow">Weekly snapshot</span>
+    <h2>本周经营数据</h2>
+  </div>
+  <span class="panel-caption">{{ page.filters.week_start }} → {{ page.filters.week_end }} · {{ page.filters.channel_account_id }}</span>
 </div>
+<section class="overview-kpi-grid" aria-label="本周经营指标">
+  {% for item in page.weekly_kpis %}
+  <article class="overview-kpi-card accent-{{ item.accent }}">
+    <div class="overview-kpi-label">{{ item.label }}</div>
+    <strong>{{ item.value }}</strong>
+    <small>{{ item.meta }}</small>
+  </article>
+  {% endfor %}
+</section>
+
+<section class="panel overview-chart-panel">
+  <div class="panel-heading">
+    <div>
+      <span class="eyebrow">3-week net sales trend</span>
+      <h2>近 3 周净销售额趋势</h2>
+    </div>
+    <span class="panel-caption">{{ page.filters.trend_start }} → {{ page.filters.trend_end }} · {{ page.filters.channel_account_id }}</span>
+  </div>
+  {% if page.empty %}
+  <div class="empty-state">
+    <strong>当前渠道近 3 周没有销售数据</strong>
+    <span>请切换销售渠道查看。</span>
+  </div>
+  {% else %}
+  <div
+    class="chart overview-sales-chart"
+    role="img"
+    aria-label="当前渠道近 3 周净销售额折线趋势图"
+    data-chart-options='{{ page.sales_chart_options | tojson }}'
+  ></div>
+  {% endif %}
+</section>
 
 <section class="panel overview-sku-panel">
   <div class="panel-heading">
     <div>
       <span class="eyebrow">SKU performance</span>
-      <h2>SKU 排行 · 按净销售额</h2>
+      <h2>SKU 排行 · 最近 3 周按净销售额</h2>
     </div>
-    <a class="panel-link" href="/sales">查看销售明细</a>
+    <div class="panel-heading-actions">
+      <span class="panel-caption">{{ page.filters.trend_start }} → {{ page.filters.trend_end }}</span>
+      <a class="panel-link" href="/sales">查看销售明细</a>
+    </div>
   </div>
   <div class="table-responsive">
     <table class="table app-table overview-sku-table align-middle mb-0">
@@ -179,7 +105,6 @@
           <th>SKU</th>
           <th class="text-end">销量</th>
           <th class="text-end">净销售额</th>
-          <th class="text-end">较上期</th>
           <th class="text-end">件数退款率</th>
           <th class="text-end">库存覆盖</th>
           <th class="text-end">未来 4 周 P50</th>
@@ -191,11 +116,6 @@
           <td><span class="sku-code">{{ row.sku_id }}</span></td>
           <td class="text-end">{{ row.units_sold }}</td>
           <td class="text-end fw-semibold">{{ row.net_sales }}</td>
-          <td class="text-end">
-            <span class="metric-state {{ row.sales_change_tone }}">
-              {{ row.sales_change }}
-            </span>
-          </td>
           <td class="text-end">
             <span class="metric-state {{ row.refund_tone }}">
               {{ row.unit_refund_rate }}
@@ -210,7 +130,7 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="7">
+          <td colspan="6">
             <div class="empty-state compact">暂无 SKU 排行数据。</div>
           </td>
         </tr>

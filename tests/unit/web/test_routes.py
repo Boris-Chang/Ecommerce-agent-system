@@ -36,16 +36,17 @@ class FakeSalesRepository:
 
     def list_sku_daily_sales(self, **kwargs) -> list[SkuDailySales]:
         self.daily_calls.append(kwargs)
+        is_amazon = kwargs["channel_account_id"] == "CA_AMAZON_US"
         return [
             SkuDailySales(
-                sales_date=date(2026, 7, 12),
-                sku_id="SKU001",
+                sales_date=kwargs["end_date"],
+                sku_id="SKU002" if is_amazon else "SKU001",
                 channel_account_id=kwargs["channel_account_id"],
                 orders_count=2,
-                units_sold=3,
-                gross_sales=Decimal("60"),
+                units_sold=4 if is_amazon else 3,
+                gross_sales=Decimal("100") if is_amazon else Decimal("60"),
                 discount_amount=Decimal("5"),
-                net_sales=Decimal("55"),
+                net_sales=Decimal("95") if is_amazon else Decimal("55"),
                 currency_code="USD",
             )
         ]
@@ -175,6 +176,18 @@ class FakeInventoryRepository:
         return []
 
 
+class FakeOrderRepository:
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    def count_orders(self, **kwargs) -> int:
+        self.calls.append(kwargs)
+        is_amazon = kwargs["channel_account_id"] == "CA_AMAZON_US"
+        if kwargs["start_date"] == kwargs["end_date"]:
+            return 1 if is_amazon else 8
+        return 3 if is_amazon else 10
+
+
 class FakeBusinessInspectionService:
     def __init__(self) -> None:
         self.calls: list[BusinessInspectionRequest] = []
@@ -223,12 +236,14 @@ def _build_client() -> tuple[TestClient, SimpleNamespace]:
     refunds = FakeRefundRepository()
     channel_sales = FakeChannelSalesRepository()
     inventory = FakeInventoryRepository()
+    orders = FakeOrderRepository()
     inspection_service = FakeBusinessInspectionService()
     unit_of_work = SimpleNamespace(
         sales=sales,
         refunds=refunds,
         channel_sales=channel_sales,
         inventory=inventory,
+        orders=orders,
         inspection_service=inspection_service,
     )
 
@@ -273,20 +288,73 @@ def test_sales_page_renders_application_data() -> None:
     assert call["end_date"] == date(2026, 7, 24)
 
 
-def test_overview_page_combines_configured_channels() -> None:
+def test_overview_page_filters_one_channel_and_shows_daily_and_weekly_data() -> None:
     client, repositories = _build_client()
 
     with client:
-        response = client.get("/overview")
+        default_response = client.get("/overview")
+        amazon_response = client.get(
+            "/overview?channel_account_id=CA_AMAZON_US"
+        )
 
-    assert response.status_code == 200
-    assert "经营总览" in response.text
-    assert "净销售额趋势" in response.text
-    assert "SKU001" in response.text
-    assert "CA_SHOPIFY_US" in response.text
-    assert "CA_AMAZON_US" in response.text
-    assert len(repositories.sales.daily_calls) == 4
-    assert len(repositories.refunds.daily_calls) == 4
+    assert default_response.status_code == 200
+    assert amazon_response.status_code == 200
+    assert "经营总览" in default_response.text
+    assert "当日经营数据" in default_response.text
+    assert "本周经营数据" in default_response.text
+    assert "近 3 周净销售额趋势" in default_response.text
+    assert '"type": "line"' in default_response.text
+    assert "SKU 排行 · 最近 3 周按净销售额" in default_response.text
+    assert "SKU001" in default_response.text
+    assert "$55.00" in default_response.text
+    assert "SKU002" in amazon_response.text
+    assert "$95.00" in amazon_response.text
+    assert '<select class="overview-filter-control" name="channel_account_id">' in (
+        amazon_response.text
+    )
+    assert 'name="start_date"' not in amazon_response.text
+    assert 'name="end_date"' not in amazon_response.text
+    assert "上一周期" not in amazon_response.text
+    assert [call["channel_account_id"] for call in repositories.sales.daily_calls] == [
+        "CA_SHOPIFY_US",
+        "CA_SHOPIFY_US",
+        "CA_AMAZON_US",
+        "CA_AMAZON_US",
+    ]
+    assert [call["channel_account_id"] for call in repositories.refunds.daily_calls] == [
+        "CA_SHOPIFY_US",
+        "CA_SHOPIFY_US",
+        "CA_AMAZON_US",
+        "CA_AMAZON_US",
+    ]
+    assert repositories.refunds.daily_calls[1]["start_date"] == date(
+        2026,
+        7,
+        4,
+    )
+    assert repositories.sales.daily_calls[0]["start_date"] == date(
+        2026,
+        7,
+        20,
+    )
+    assert repositories.sales.daily_calls[0]["end_date"] == date(
+        2026,
+        7,
+        24,
+    )
+    assert repositories.sales.daily_calls[1]["start_date"] == date(
+        2026,
+        7,
+        4,
+    )
+    assert [call["channel_account_id"] for call in repositories.orders.calls] == [
+        "CA_SHOPIFY_US",
+        "CA_SHOPIFY_US",
+        "CA_AMAZON_US",
+        "CA_AMAZON_US",
+    ]
+    assert repositories.orders.calls[0]["start_date"] == date(2026, 7, 24)
+    assert repositories.orders.calls[1]["start_date"] == date(2026, 7, 20)
 
 
 def test_overview_page_rejects_unknown_channel() -> None:

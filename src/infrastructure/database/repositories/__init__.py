@@ -7,6 +7,9 @@ from infrastructure.database.repositories.customer import (
 from infrastructure.database.repositories.inventory import (
     PostgresInventoryRepository,
 )
+from infrastructure.database.repositories.order import (
+    PostgresOrderSummaryRepository,
+)
 from infrastructure.database.repositories.profit import (
     PostgresProfitRepository,
 )
@@ -19,6 +22,7 @@ __all__ = [
     "PostgresChannelSalesRepository",
     "PostgresCustomerRepository",
     "PostgresInventoryRepository",
+    "PostgresOrderSummaryRepository",
     "PostgresProfitRepository",
     "PostgresSalesAnalyticsRepository",
     "PostgresSkuRefundRepository",

@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from datetime import date
 from decimal import Decimal
 
-from application.dto.overview import OverviewDashboard
+from application.dto.overview import OverviewDashboard, OverviewKpis
 from web.presenters.common import (
     format_money,
     format_percent,
@@ -34,74 +34,27 @@ class OverviewPresenter:
         *,
         available_channel_account_ids: Sequence[str],
     ) -> OverviewPageViewModel:
-        kpis = dashboard.kpis
         return OverviewPageViewModel(
             filters=OverviewFilterViewModel(
-                channel_account_ids=dashboard.filters.channel_account_ids,
-                available_channel_account_ids=tuple(
-                    available_channel_account_ids
-                ),
-                start_date=dashboard.filters.start_date.isoformat(),
-                end_date=dashboard.filters.end_date.isoformat(),
+                channel_account_id=dashboard.filters.channel_account_id,
+                channel_account_ids=tuple(available_channel_account_ids),
+                day=dashboard.filters.day.isoformat(),
+                week_start=dashboard.filters.week_start.isoformat(),
+                week_end=dashboard.filters.week_end.isoformat(),
+                trend_start=dashboard.filters.trend_start.isoformat(),
+                trend_end=dashboard.filters.trend_end.isoformat(),
                 currency_code=dashboard.filters.currency_code,
             ),
             generated_at=format_timestamp(dashboard.generated_at),
-            kpis=(
-                _kpi(
-                    "净销售额",
-                    _money(kpis.net_sales, dashboard.filters.currency_code),
-                    kpis.net_sales_change_pct,
-                    "对比上一周期",
-                    "primary",
-                ),
-                _kpi(
-                    "销量",
-                    f"{kpis.units_sold:,}",
-                    kpis.units_change_pct,
-                    "销售件数",
-                    "primary",
-                ),
-                _kpi(
-                    "订单数",
-                    f"{kpis.orders_count:,}",
-                    kpis.orders_change_pct,
-                    "统一订单指标待接入",
-                    "neutral",
-                ),
-                _kpi(
-                    "客单价",
-                    _money(
-                        kpis.average_order_value,
-                        dashboard.filters.currency_code,
-                    ),
-                    kpis.average_order_value_change_pct,
-                    "净销售额 ÷ 订单数",
-                    "neutral",
-                ),
-                OverviewKpiViewModel(
-                    label="件数退款率",
-                    value=format_percent(kpis.unit_refund_rate_pct),
-                    change=_format_points(
-                        kpis.unit_refund_rate_change_points
-                    ),
-                    change_tone=_inverse_tone(
-                        kpis.unit_refund_rate_change_points
-                    ),
-                    meta="退款件数 ÷ 销售件数",
-                    accent="danger",
-                ),
-                OverviewKpiViewModel(
-                    label="缺货风险 SKU",
-                    value=f"{kpis.stockout_risk_skus:,}",
-                    change="查看库存风险",
-                    change_tone=(
-                        "negative"
-                        if kpis.stockout_risk_skus
-                        else "neutral"
-                    ),
-                    meta="库存快照状态 replenish",
-                    accent="warning",
-                ),
+            daily_kpis=_period_kpis(
+                dashboard.daily_kpis,
+                dashboard.filters.currency_code,
+                period_label="当日",
+            ),
+            weekly_kpis=_period_kpis(
+                dashboard.weekly_kpis,
+                dashboard.filters.currency_code,
+                period_label="本周",
             ),
             sales_chart_options=_sales_chart(dashboard),
             channels=tuple(
@@ -141,20 +94,43 @@ class OverviewPresenter:
         )
 
 
-def _kpi(
-    label: str,
-    value: str,
-    change_value: Decimal | None,
-    meta: str,
-    accent: str,
-) -> OverviewKpiViewModel:
-    return OverviewKpiViewModel(
-        label=label,
-        value=value,
-        change=_format_change(change_value),
-        change_tone=_tone(change_value),
-        meta=meta,
-        accent=accent,
+def _period_kpis(
+    kpis: OverviewKpis,
+    currency_code: str,
+    *,
+    period_label: str,
+) -> tuple[OverviewKpiViewModel, ...]:
+    return (
+        OverviewKpiViewModel(
+            label="净销售额",
+            value=_money(kpis.net_sales, currency_code),
+            meta=f"{period_label}净销售额",
+            accent="primary",
+        ),
+        OverviewKpiViewModel(
+            label="销量",
+            value=f"{kpis.units_sold:,}",
+            meta=f"{period_label}销售件数",
+            accent="primary",
+        ),
+        OverviewKpiViewModel(
+            label="订单数",
+            value=f"{kpis.orders_count:,}",
+            meta="来自 sales.orders 的非取消订单",
+            accent="neutral",
+        ),
+        OverviewKpiViewModel(
+            label="客单价",
+            value=_money(kpis.average_order_value, currency_code),
+            meta="净销售额 ÷ 订单数",
+            accent="neutral",
+        ),
+        OverviewKpiViewModel(
+            label="件数退款率",
+            value=format_percent(kpis.unit_refund_rate_pct),
+            meta="退款件数 ÷ 销售件数",
+            accent="danger",
+        ),
     )
 
 
@@ -166,7 +142,7 @@ def _sales_chart(dashboard: OverviewDashboard) -> dict[str, object]:
     return {
         "animationDuration": 350,
         "color": ["#12a594", "#8fd9cf", "#377cf6", "#7b8ca5"],
-        "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}},
+        "tooltip": {"trigger": "axis", "axisPointer": {"type": "line"}},
         "legend": {"bottom": 0},
         "grid": {
             "left": 28,
@@ -187,16 +163,18 @@ def _sales_chart(dashboard: OverviewDashboard) -> dict[str, object]:
         "series": [
             {
                 "name": channel_id,
-                "type": "bar",
-                "stack": "net-sales",
-                "barMaxWidth": 28,
+                "type": "line",
+                "smooth": True,
+                "showSymbol": False,
+                "lineStyle": {"width": 3},
+                "areaStyle": {"opacity": 0.08},
                 "emphasis": {"focus": "series"},
                 "data": [
                     float(values[(channel_id, sales_date)])
                     for sales_date in dates
                 ],
             }
-            for channel_id in dashboard.filters.channel_account_ids
+            for channel_id in (dashboard.filters.channel_account_id,)
         ],
     }
 
@@ -208,8 +186,6 @@ def _sku_row(row: object, currency_code: str) -> OverviewSkuRowViewModel:
         sku_id=row.sku_id,
         units_sold=f"{row.units_sold:,}",
         net_sales=_money(row.net_sales, currency_code),
-        sales_change=_format_change(row.sales_change_pct),
-        sales_change_tone=_tone(row.sales_change_pct),
         unit_refund_rate=format_percent(refund_rate),
         refund_tone="negative" if refund_rate >= Decimal("8") else "neutral",
         inventory_cover_days=(
@@ -229,29 +205,3 @@ def _sku_row(row: object, currency_code: str) -> OverviewSkuRowViewModel:
 def _money(value: Decimal, currency_code: str) -> str:
     prefix = "$" if currency_code == "USD" else f"{currency_code} "
     return f"{prefix}{format_money(value)}"
-
-
-def _format_change(value: Decimal | None) -> str:
-    if value is None:
-        return "无可比基准"
-    symbol = "▲" if value > 0 else "▼" if value < 0 else "—"
-    return f"{symbol} {abs(value):.1f}%"
-
-
-def _format_points(value: Decimal | None) -> str:
-    if value is None:
-        return "无可比基准"
-    symbol = "▲" if value > 0 else "▼" if value < 0 else "—"
-    return f"{symbol} {abs(value):.1f}pt"
-
-
-def _tone(value: Decimal | None) -> str:
-    if value is None or value == 0:
-        return "neutral"
-    return "positive" if value > 0 else "negative"
-
-
-def _inverse_tone(value: Decimal | None) -> str:
-    if value is None or value == 0:
-        return "neutral"
-    return "negative" if value > 0 else "positive"

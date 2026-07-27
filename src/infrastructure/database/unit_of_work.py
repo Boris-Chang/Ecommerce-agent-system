@@ -6,6 +6,7 @@ from infrastructure.database.repositories import (
     PostgresChannelSalesRepository,
     PostgresCustomerRepository,
     PostgresInventoryRepository,
+    PostgresOrderSummaryRepository,
     PostgresProfitRepository,
     PostgresSalesAnalyticsRepository,
     PostgresSkuRefundRepository,
@@ -26,6 +27,7 @@ class ReadOnlyUnitOfWork:
         self.channel_sales = PostgresChannelSalesRepository(self.session)
         self.refunds = PostgresSkuRefundRepository(self.session)
         self.inventory = PostgresInventoryRepository(self.session)
+        self.orders = PostgresOrderSummaryRepository(self.session)
         self.customers = PostgresCustomerRepository(self.session)
         self.profit = PostgresProfitRepository(self.session)
         return self

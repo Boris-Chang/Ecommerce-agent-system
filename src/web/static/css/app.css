@@ -1054,6 +1054,19 @@ button.overview-filter-control {
   margin-bottom: 18px;
 }
 
+.overview-period-heading {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin: 22px 2px 10px;
+}
+
+.overview-period-heading h2 {
+  margin: 2px 0 0;
+  font-size: 17px;
+}
+
 .overview-kpi-card {
   position: relative;
   min-width: 0;
@@ -1144,6 +1157,14 @@ button.overview-filter-control {
 
 .overview-sales-chart {
   height: 340px;
+}
+
+.panel-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .panel-link {

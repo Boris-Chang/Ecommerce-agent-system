@@ -3,10 +3,13 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class OverviewFilterViewModel:
+    channel_account_id: str
     channel_account_ids: tuple[str, ...]
-    available_channel_account_ids: tuple[str, ...]
-    start_date: str
-    end_date: str
+    day: str
+    week_start: str
+    week_end: str
+    trend_start: str
+    trend_end: str
     currency_code: str
 
 
@@ -14,8 +17,6 @@ class OverviewFilterViewModel:
 class OverviewKpiViewModel:
     label: str
     value: str
-    change: str
-    change_tone: str
     meta: str
     accent: str
 
@@ -35,8 +36,6 @@ class OverviewSkuRowViewModel:
     sku_id: str
     units_sold: str
     net_sales: str
-    sales_change: str
-    sales_change_tone: str
     unit_refund_rate: str
     refund_tone: str
     inventory_cover_days: str
@@ -58,7 +57,8 @@ class OverviewInsightViewModel:
 class OverviewPageViewModel:
     filters: OverviewFilterViewModel
     generated_at: str
-    kpis: tuple[OverviewKpiViewModel, ...]
+    daily_kpis: tuple[OverviewKpiViewModel, ...]
+    weekly_kpis: tuple[OverviewKpiViewModel, ...]
     sales_chart_options: dict[str, object]
     channels: tuple[OverviewChannelViewModel, ...]
     sku_rows: tuple[OverviewSkuRowViewModel, ...]

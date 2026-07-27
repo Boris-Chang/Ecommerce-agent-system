@@ -9,7 +9,6 @@ from application.dto.overview import (
 
 TWO_PLACES = Decimal("0.01")
 FOUR_PLACES = Decimal("0.0001")
-ASSUMED_AOV = Decimal("61.30")
 CHANNEL_MARGIN_WEIGHTS = {
     "CA_SHOPIFY_US": Decimal("0.62"),
     "CA_AMAZON_US": Decimal("0.44"),
@@ -23,8 +22,6 @@ class FixedOverviewSupplementProvider:
         self,
         request: OverviewSupplementRequest,
     ) -> OverviewSupplement:
-        orders_count = _estimated_orders(request.current_net_sales)
-        previous_orders_count = _estimated_orders(request.previous_net_sales)
         profit_share = _profit_shares(request)
         forecasts = {
             sku_id: (Decimal(units) * Decimal("4.20")).quantize(
@@ -34,30 +31,20 @@ class FixedOverviewSupplementProvider:
             for sku_id, units in request.top_sku_units
         }
         return OverviewSupplement(
-            orders_count=orders_count,
-            previous_orders_count=previous_orders_count,
             gross_profit_share_pct=profit_share,
             forecast_4w_p50=forecasts,
             insights=_build_insights(request),
             data_source="fixed_overview_supplement_v1",
         )
 
-
-def _estimated_orders(net_sales: Decimal) -> int:
-    if net_sales <= 0:
-        return 0
-    return max(1, int((net_sales / ASSUMED_AOV).to_integral_value()))
-
-
 def _profit_shares(
     request: OverviewSupplementRequest,
 ) -> dict[str, Decimal]:
     weights = {
-        channel_id: CHANNEL_MARGIN_WEIGHTS.get(
-            channel_id,
+        request.channel_account_id: CHANNEL_MARGIN_WEIGHTS.get(
+            request.channel_account_id,
             Decimal("0.50"),
         )
-        for channel_id in request.channel_account_ids
     }
     total = sum(weights.values(), Decimal("0"))
     if total == 0:

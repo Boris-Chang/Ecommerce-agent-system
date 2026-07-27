@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
 from application.services.overview import OverviewDashboardService
@@ -8,7 +8,7 @@ from infrastructure.database.unit_of_work import ReadOnlyUnitOfWork
 from infrastructure.mock import FixedOverviewSupplementProvider
 from web.dependencies import get_read_uow, get_web_settings
 from web.presenters.overview import OverviewPresenter
-from web.routes._common import resolve_sales_period
+from web.routes._common import resolve_channel_account_id
 from web.settings import WebSettings
 
 
@@ -18,26 +18,25 @@ router = APIRouter(tags=["overview"])
 @router.get("/overview", response_class=HTMLResponse)
 def overview_page(
     request: Request,
-    channel_account_id: list[str] = Query(default=[]),
-    start_date: date | None = None,
-    end_date: date | None = None,
+    channel_account_id: str | None = None,
     currency_code: str = "USD",
     unit_of_work: ReadOnlyUnitOfWork = Depends(get_read_uow),
     settings: WebSettings = Depends(get_web_settings),
 ) -> HTMLResponse:
-    default_start, default_end = resolve_sales_period(settings)
-    resolved_start = start_date or default_start
-    resolved_end = end_date or default_end
-    channels = _resolve_channels(settings, channel_account_id)
+    resolved_channel = resolve_channel_account_id(
+        settings,
+        channel_account_id,
+    )
+    as_of_date = settings.web_default_end_date or date.today()
     dashboard = OverviewDashboardService(
         sales_repository=unit_of_work.sales,
         refund_repository=unit_of_work.refunds,
         inventory_repository=unit_of_work.inventory,
+        order_repository=unit_of_work.orders,
         supplement_provider=FixedOverviewSupplementProvider(),
     ).get_dashboard(
-        channel_account_ids=channels,
-        start_date=resolved_start,
-        end_date=resolved_end,
+        channel_account_id=resolved_channel,
+        as_of_date=as_of_date,
         currency_code=_resolve_currency(currency_code),
         limit=settings.web_overview_query_limit,
     )
@@ -54,24 +53,6 @@ def overview_page(
             "web_title": settings.web_title,
         },
     )
-
-
-def _resolve_channels(
-    settings: WebSettings,
-    requested: list[str],
-) -> tuple[str, ...]:
-    if not requested:
-        return settings.channel_account_ids
-    resolved = tuple(dict.fromkeys(value.strip() for value in requested))
-    unsupported = [
-        value
-        for value in resolved
-        if value not in settings.channel_account_ids
-    ]
-    if unsupported or any(not value for value in resolved):
-        invalid = unsupported[0] if unsupported else "(blank)"
-        raise ValueError(f"Unsupported channel_account_id: {invalid}.")
-    return resolved
 
 
 def _resolve_currency(value: str) -> str:
