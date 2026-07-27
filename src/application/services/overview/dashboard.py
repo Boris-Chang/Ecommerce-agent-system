@@ -15,6 +15,7 @@ from application.dto.overview import (
 )
 from application.dto.sku import SkuDailyRefunds, SkuDailySales
 from application.repositories.inventory import InventoryRepository
+from application.repositories.order import OrderSummaryRepository
 from application.repositories.overview import OverviewSupplementProvider
 from application.repositories.sku import (
     SalesAnalyticsRepository,
@@ -25,6 +26,7 @@ from application.services.sku import (
     SkuSalesService,
     SkuWeeklyForecastService,
 )
+from application.services.order import OrderSummaryService
 
 
 PERCENT = Decimal("100")
@@ -32,6 +34,7 @@ FOUR_PLACES = Decimal("0.0001")
 TWO_PLACES = Decimal("0.01")
 TOP_SKU_LIMIT = 8
 FORECAST_TRAINING_WEEKS = 12
+TREND_DAYS = 21
 
 
 class OverviewDashboardService:
@@ -43,77 +46,95 @@ class OverviewDashboardService:
         sales_repository: SalesAnalyticsRepository,
         refund_repository: SkuRefundRepository,
         inventory_repository: InventoryRepository,
+        order_repository: OrderSummaryRepository,
         supplement_provider: OverviewSupplementProvider,
     ) -> None:
         self._sales_repository = sales_repository
         self._refund_repository = refund_repository
         self._inventory_repository = inventory_repository
+        self._order_repository = order_repository
         self._supplement_provider = supplement_provider
 
     def get_dashboard(
         self,
         *,
-        channel_account_ids: Sequence[str],
-        start_date: date,
-        end_date: date,
+        channel_account_id: str,
+        as_of_date: date,
         currency_code: str = "USD",
         limit: int = 10_000,
         generated_at: datetime | None = None,
     ) -> OverviewDashboard:
-        channels = _validate_filters(
-            channel_account_ids,
-            start_date,
-            end_date,
+        channel = _validate_filters(
+            channel_account_id,
             currency_code,
             limit,
         )
-        previous_start, previous_end = _previous_period(start_date, end_date)
+        week_start = as_of_date - timedelta(days=as_of_date.weekday())
+        trend_start = as_of_date - timedelta(days=TREND_DAYS - 1)
         sales_service = SkuSalesService(self._sales_repository)
         refund_service = SkuRefundService(self._refund_repository)
-        current_sales = _load_sales(
+        order_service = OrderSummaryService(self._order_repository)
+        weekly_sales = _load_sales(
             sales_service,
-            channels,
-            start_date,
-            end_date,
+            channel,
+            week_start,
+            as_of_date,
             currency_code,
             limit,
         )
-        previous_sales = _load_sales(
+        daily_sales = [
+            row for row in weekly_sales if row.sales_date == as_of_date
+        ]
+        trend_sales = _load_sales(
             sales_service,
-            channels,
-            previous_start,
-            previous_end,
+            channel,
+            trend_start,
+            as_of_date,
             currency_code,
             limit,
         )
-        current_refunds = _load_refunds(
+        weekly_refunds = _load_refunds(
             refund_service,
-            channels,
-            start_date,
-            end_date,
+            channel,
+            week_start,
+            as_of_date,
             currency_code,
             limit,
         )
-        previous_refunds = _load_refunds(
+        daily_refunds = [
+            row for row in weekly_refunds if row.refund_date == as_of_date
+        ]
+        trend_refunds = _load_refunds(
             refund_service,
-            channels,
-            previous_start,
-            previous_end,
+            channel,
+            trend_start,
+            as_of_date,
             currency_code,
             limit,
+        )
+        daily_orders_count = order_service.count_orders(
+            channel_account_id=channel,
+            start_date=as_of_date,
+            end_date=as_of_date,
+            currency_code=currency_code,
+        )
+        weekly_orders_count = order_service.count_orders(
+            channel_account_id=channel,
+            start_date=week_start,
+            end_date=as_of_date,
+            currency_code=currency_code,
         )
         inventory_cover = list(
             self._inventory_repository.list_inventory_cover(limit=limit)
         )
 
-        current_totals = _sales_totals(current_sales)
-        previous_totals = _sales_totals(previous_sales)
-        current_skus = _sku_totals(current_sales)
-        previous_skus = _sku_totals(previous_sales)
+        daily_totals = _sales_totals(daily_sales)
+        weekly_totals = _sales_totals(weekly_sales)
+        trend_skus = _sku_totals(trend_sales)
         top_skus = sorted(
-            current_skus,
+            trend_skus,
             key=lambda sku_id: (
-                -current_skus[sku_id]["net_sales"],
+                -trend_skus[sku_id]["net_sales"],
                 sku_id,
             ),
         )[:TOP_SKU_LIMIT]
@@ -137,15 +158,14 @@ class OverviewDashboardService:
         )
         supplement = self._supplement_provider.get_supplement(
             OverviewSupplementRequest(
-                channel_account_ids=channels,
-                start_date=start_date,
-                end_date=end_date,
-                current_net_sales=current_totals["net_sales"],
-                previous_net_sales=previous_totals["net_sales"],
+                channel_account_id=channel,
+                day=as_of_date,
+                week_start=week_start,
+                week_end=as_of_date,
                 top_sku_units=tuple(
                     (
                         sku_id,
-                        int(current_skus[sku_id]["units_sold"]),
+                        int(trend_skus[sku_id]["units_sold"]),
                     )
                     for sku_id in top_skus
                 ),
@@ -155,82 +175,49 @@ class OverviewDashboardService:
         )
         forecast_by_sku = dict(supplement.forecast_4w_p50)
         real_forecasts = self._generate_real_forecasts(
-            channels=channels,
-            end_date=end_date,
+            channels=(channel,),
+            end_date=as_of_date,
             top_skus=set(top_skus),
             limit=limit,
         )
         forecast_by_sku.update(real_forecasts)
 
-        current_refunded_units = sum(
-            row.refunded_units for row in current_refunds
-        )
-        previous_refunded_units = sum(
-            row.refunded_units for row in previous_refunds
-        )
-        current_refund_rate = _percentage(
-            Decimal(current_refunded_units),
-            current_totals["units_sold"],
-        )
-        previous_refund_rate = _percentage(
-            Decimal(previous_refunded_units),
-            previous_totals["units_sold"],
-        )
-        current_aov = _safe_divide(
-            current_totals["net_sales"],
-            Decimal(supplement.orders_count),
-        )
-        previous_aov = _safe_divide(
-            previous_totals["net_sales"],
-            Decimal(supplement.previous_orders_count),
-        )
-
         return OverviewDashboard(
             filters=OverviewFilters(
-                channel_account_ids=channels,
-                start_date=start_date,
-                end_date=end_date,
+                channel_account_id=channel,
+                day=as_of_date,
+                week_start=week_start,
+                week_end=as_of_date,
+                trend_start=trend_start,
+                trend_end=as_of_date,
                 currency_code=currency_code,
             ),
             generated_at=generated_at or datetime.now(timezone.utc),
-            kpis=OverviewKpis(
-                net_sales=current_totals["net_sales"],
-                net_sales_change_pct=_percent_change(
-                    current_totals["net_sales"],
-                    previous_totals["net_sales"],
-                ),
-                units_sold=int(current_totals["units_sold"]),
-                units_change_pct=_percent_change(
-                    current_totals["units_sold"],
-                    previous_totals["units_sold"],
-                ),
-                orders_count=supplement.orders_count,
-                orders_change_pct=_percent_change(
-                    Decimal(supplement.orders_count),
-                    Decimal(supplement.previous_orders_count),
-                ),
-                average_order_value=current_aov,
-                average_order_value_change_pct=_percent_change(
-                    current_aov,
-                    previous_aov,
-                ),
-                unit_refund_rate_pct=current_refund_rate,
-                unit_refund_rate_change_points=(
-                    current_refund_rate - previous_refund_rate
-                ).quantize(FOUR_PLACES),
-                stockout_risk_skus=len(replenishment_skus),
+            daily_kpis=_build_kpis(
+                totals=daily_totals,
+                refunds=daily_refunds,
+                orders_count=daily_orders_count,
             ),
-            trend=_build_trend(current_sales),
+            weekly_kpis=_build_kpis(
+                totals=weekly_totals,
+                refunds=weekly_refunds,
+                orders_count=weekly_orders_count,
+            ),
+            trend=_build_trend(
+                trend_sales,
+                channel_account_id=channel,
+                start_date=trend_start,
+                end_date=as_of_date,
+            ),
             channel_contributions=_build_channel_contributions(
-                current_sales,
-                channels,
+                weekly_sales,
+                (channel,),
                 supplement.gross_profit_share_pct,
             ),
             sku_performance=_build_sku_performance(
                 top_skus=top_skus,
-                current_skus=current_skus,
-                previous_skus=previous_skus,
-                refunds=current_refunds,
+                current_skus=trend_skus,
+                refunds=trend_refunds,
                 inventory_cover=inventory_cover,
                 forecast_by_sku=forecast_by_sku,
             ),
@@ -239,6 +226,7 @@ class OverviewDashboardService:
                 dict.fromkeys(
                     (
                         "analytics.v_sku_daily_sales",
+                        "sales.orders",
                         "analytics.v_sku_daily_refunds",
                         "analytics.v_inventory_cover",
                         *(
@@ -284,76 +272,58 @@ class OverviewDashboardService:
 
 
 def _validate_filters(
-    channel_account_ids: Sequence[str],
-    start_date: date,
-    end_date: date,
+    channel_account_id: str,
     currency_code: str,
     limit: int,
-) -> tuple[str, ...]:
-    channels = tuple(
-        dict.fromkeys(value.strip() for value in channel_account_ids)
-    )
-    if not channels or any(not value for value in channels):
-        raise ValueError("at least one channel_account_id is required.")
-    if start_date > end_date:
-        raise ValueError("start_date must not be after end_date.")
+) -> str:
+    channel = channel_account_id.strip()
+    if not channel:
+        raise ValueError("channel_account_id must not be blank.")
     if not currency_code.strip():
         raise ValueError("currency_code must not be blank.")
     if not 1 <= limit <= 10_000:
         raise ValueError("limit must be between 1 and 10000.")
-    return channels
-
-
-def _previous_period(start_date: date, end_date: date) -> tuple[date, date]:
-    period_days = (end_date - start_date).days + 1
-    previous_end = start_date - timedelta(days=1)
-    return previous_end - timedelta(days=period_days - 1), previous_end
+    return channel
 
 
 def _load_sales(
     service: SkuSalesService,
-    channels: Sequence[str],
+    channel_account_id: str,
     start_date: date,
     end_date: date,
     currency_code: str,
     limit: int,
 ) -> list[SkuDailySales]:
-    rows: list[SkuDailySales] = []
-    for channel_id in channels:
-        rows.extend(
-            row
-            for row in service.list_daily_sales(
-                channel_account_id=channel_id,
-                start_date=start_date,
-                end_date=end_date,
-                limit=limit,
-            )
-            if row.currency_code == currency_code
+    return [
+        row
+        for row in service.list_daily_sales(
+            channel_account_id=channel_account_id,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
         )
-    return rows
+        if row.currency_code == currency_code
+    ]
 
 
 def _load_refunds(
     service: SkuRefundService,
-    channels: Sequence[str],
+    channel_account_id: str,
     start_date: date,
     end_date: date,
     currency_code: str,
     limit: int,
 ) -> list[SkuDailyRefunds]:
-    rows: list[SkuDailyRefunds] = []
-    for channel_id in channels:
-        rows.extend(
-            row
-            for row in service.list_daily_refunds(
-                channel_account_id=channel_id,
-                start_date=start_date,
-                end_date=end_date,
-                limit=limit,
-            )
-            if row.currency_code == currency_code
+    return [
+        row
+        for row in service.list_daily_refunds(
+            channel_account_id=channel_account_id,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
         )
-    return rows
+        if row.currency_code == currency_code
+    ]
 
 
 def _sales_totals(
@@ -371,6 +341,28 @@ def _sales_totals(
     }
 
 
+def _build_kpis(
+    *,
+    totals: dict[str, Decimal],
+    refunds: Sequence[SkuDailyRefunds],
+    orders_count: int,
+) -> OverviewKpis:
+    refunded_units = sum(row.refunded_units for row in refunds)
+    return OverviewKpis(
+        net_sales=totals["net_sales"],
+        units_sold=int(totals["units_sold"]),
+        orders_count=orders_count,
+        average_order_value=_safe_divide(
+            totals["net_sales"],
+            Decimal(orders_count),
+        ),
+        unit_refund_rate_pct=_percentage(
+            Decimal(refunded_units),
+            totals["units_sold"],
+        ),
+    )
+
+
 def _sku_totals(
     rows: Sequence[SkuDailySales],
 ) -> dict[str, dict[str, Decimal]]:
@@ -385,19 +377,23 @@ def _sku_totals(
 
 def _build_trend(
     rows: Sequence[SkuDailySales],
+    *,
+    channel_account_id: str,
+    start_date: date,
+    end_date: date,
 ) -> tuple[OverviewTrendPoint, ...]:
-    values: dict[tuple[date, str], Decimal] = defaultdict(Decimal)
+    if not rows:
+        return ()
+    values: dict[date, Decimal] = defaultdict(Decimal)
     for row in rows:
-        values[(row.sales_date, row.channel_account_id)] += (
-            row.net_sales or Decimal("0")
-        )
+        values[row.sales_date] += row.net_sales or Decimal("0")
     return tuple(
         OverviewTrendPoint(
-            sales_date=sales_date,
-            channel_account_id=channel_id,
-            net_sales=net_sales,
+            sales_date=start_date + timedelta(days=offset),
+            channel_account_id=channel_account_id,
+            net_sales=values[start_date + timedelta(days=offset)],
         )
-        for (sales_date, channel_id), net_sales in sorted(values.items())
+        for offset in range((end_date - start_date).days + 1)
     )
 
 
@@ -450,7 +446,6 @@ def _build_sku_performance(
     *,
     top_skus: Sequence[str],
     current_skus: dict[str, dict[str, Decimal]],
-    previous_skus: dict[str, dict[str, Decimal]],
     refunds: Sequence[SkuDailyRefunds],
     inventory_cover: Sequence[InventoryCover],
     forecast_by_sku: dict[str, Decimal],
@@ -471,13 +466,6 @@ def _build_sku_performance(
             sku_id=sku_id,
             units_sold=int(current_skus[sku_id]["units_sold"]),
             net_sales=current_skus[sku_id]["net_sales"],
-            sales_change_pct=_percent_change(
-                current_skus[sku_id]["net_sales"],
-                previous_skus.get(
-                    sku_id,
-                    {"net_sales": Decimal("0")},
-                )["net_sales"],
-            ),
             unit_refund_rate_pct=_percentage(
                 Decimal(refunded_units[sku_id]),
                 current_skus[sku_id]["units_sold"],
@@ -502,15 +490,6 @@ def _percentage(value: Decimal, total: Decimal) -> Decimal:
     if total == 0:
         return Decimal("0")
     return ((value / total) * PERCENT).quantize(
-        FOUR_PLACES,
-        ROUND_HALF_UP,
-    )
-
-
-def _percent_change(current: Decimal, previous: Decimal) -> Decimal | None:
-    if previous == 0:
-        return None
-    return (((current - previous) / previous) * PERCENT).quantize(
         FOUR_PLACES,
         ROUND_HALF_UP,
     )

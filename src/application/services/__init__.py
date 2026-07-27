@@ -7,6 +7,7 @@ from application.services.inventory import (
     InventoryRiskService,
 )
 from application.services.overview import OverviewDashboardService
+from application.services.order import OrderSummaryService
 from application.services.sku import (
     SkuDashboardService,
     SkuRefundService,
@@ -20,6 +21,7 @@ __all__ = [
     "InventoryDashboardService",
     "InventoryRiskService",
     "OverviewDashboardService",
+    "OrderSummaryService",
     "SkuDashboardService",
     "SkuRefundService",
     "SkuSalesService",

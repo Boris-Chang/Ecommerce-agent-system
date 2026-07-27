@@ -17,28 +17,36 @@ from application.services.overview import OverviewDashboardService
 
 class FakeSalesRepository:
     def list_sku_daily_sales(self, **kwargs) -> list[SkuDailySales]:
-        current = kwargs["start_date"] == date(2026, 7, 1)
-        values = {
-            "CA_SHOPIFY_US": (
-                Decimal("100") if current else Decimal("80"),
-                10 if current else 8,
+        rows = [
+            SkuDailySales(
+                sales_date=kwargs["start_date"],
+                sku_id="SKU001",
+                channel_account_id=kwargs["channel_account_id"],
+                units_sold=6,
+                net_sales=Decimal("60"),
+                currency_code="USD",
             ),
-            "CA_AMAZON_US": (
-                Decimal("50") if current else Decimal("20"),
-                5 if current else 2,
-            ),
-        }
-        net_sales, units = values[kwargs["channel_account_id"]]
-        return [
             SkuDailySales(
                 sales_date=kwargs["end_date"],
                 sku_id="SKU001",
                 channel_account_id=kwargs["channel_account_id"],
-                units_sold=units,
-                net_sales=net_sales,
+                units_sold=4,
+                net_sales=Decimal("40"),
                 currency_code="USD",
             )
         ]
+        if kwargs["start_date"] == date(2026, 6, 24):
+            rows.append(
+                SkuDailySales(
+                    sales_date=date(2026, 7, 1),
+                    sku_id="SKU002",
+                    channel_account_id=kwargs["channel_account_id"],
+                    units_sold=20,
+                    net_sales=Decimal("200"),
+                    currency_code="USD",
+                )
+            )
+        return rows
 
     def list_sku_weekly_sales(self, **kwargs) -> list[SkuWeeklySales]:
         return [
@@ -65,16 +73,15 @@ class FakeSalesRepository:
 
 class FakeRefundRepository:
     def list_sku_daily_refunds(self, **kwargs) -> list[SkuDailyRefunds]:
-        current = kwargs["start_date"] == date(2026, 7, 1)
         return [
             SkuDailyRefunds(
                 refund_date=kwargs["end_date"],
                 sku_id="SKU001",
                 channel_account_id=kwargs["channel_account_id"],
-                refund_count=1 if current else 0,
-                refunded_order_count=1 if current else 0,
-                refunded_units=1 if current else 0,
-                item_refund_amount=Decimal("10") if current else Decimal("0"),
+                refund_count=1,
+                refunded_order_count=1,
+                refunded_units=1,
+                item_refund_amount=Decimal("10"),
                 tax_refund_amount=Decimal("0"),
                 shipping_refund_amount=Decimal("0"),
                 currency_code="USD",
@@ -106,17 +113,21 @@ class FakeInventoryRepository:
         return []
 
 
+class FakeOrderRepository:
+    def count_orders(self, **kwargs) -> int:
+        if kwargs["start_date"] == kwargs["end_date"]:
+            return 2
+        return 4
+
+
 class FakeSupplementProvider:
     def get_supplement(
         self,
         request: OverviewSupplementRequest,
     ) -> OverviewSupplement:
         return OverviewSupplement(
-            orders_count=3,
-            previous_orders_count=2,
             gross_profit_share_pct={
                 "CA_SHOPIFY_US": Decimal("70"),
-                "CA_AMAZON_US": Decimal("30"),
             },
             forecast_4w_p50={"SKU001": Decimal("999")},
             insights=(
@@ -137,24 +148,41 @@ def test_overview_dashboard_combines_real_metrics_and_typed_supplement() -> None
         sales_repository=FakeSalesRepository(),
         refund_repository=FakeRefundRepository(),
         inventory_repository=FakeInventoryRepository(),
+        order_repository=FakeOrderRepository(),
         supplement_provider=FakeSupplementProvider(),
     ).get_dashboard(
-        channel_account_ids=("CA_SHOPIFY_US", "CA_AMAZON_US"),
-        start_date=date(2026, 7, 1),
-        end_date=date(2026, 7, 14),
+        channel_account_id="CA_SHOPIFY_US",
+        as_of_date=date(2026, 7, 14),
         currency_code="USD",
     )
 
-    assert dashboard.kpis.net_sales == Decimal("150")
-    assert dashboard.kpis.units_sold == 15
-    assert dashboard.kpis.orders_count == 3
-    assert dashboard.kpis.average_order_value == Decimal("50.00")
-    assert dashboard.kpis.unit_refund_rate_pct == Decimal("13.3333")
-    assert dashboard.kpis.stockout_risk_skus == 1
-    assert len(dashboard.channel_contributions) == 2
+    assert dashboard.filters.channel_account_id == "CA_SHOPIFY_US"
+    assert dashboard.filters.day == date(2026, 7, 14)
+    assert dashboard.filters.week_start == date(2026, 7, 13)
+    assert dashboard.filters.trend_start == date(2026, 6, 24)
+    assert dashboard.filters.trend_end == date(2026, 7, 14)
+    assert dashboard.daily_kpis.net_sales == Decimal("40")
+    assert dashboard.daily_kpis.units_sold == 4
+    assert dashboard.daily_kpis.orders_count == 2
+    assert dashboard.daily_kpis.average_order_value == Decimal("20.00")
+    assert dashboard.daily_kpis.unit_refund_rate_pct == Decimal("25.0000")
+    assert dashboard.weekly_kpis.net_sales == Decimal("100")
+    assert dashboard.weekly_kpis.units_sold == 10
+    assert dashboard.weekly_kpis.orders_count == 4
+    assert dashboard.weekly_kpis.average_order_value == Decimal("25.00")
+    assert dashboard.weekly_kpis.unit_refund_rate_pct == Decimal("10.0000")
+    assert len(dashboard.trend) == 21
+    assert dashboard.trend[0].sales_date == date(2026, 6, 24)
+    assert dashboard.trend[-1].sales_date == date(2026, 7, 14)
+    assert len(dashboard.channel_contributions) == 1
     assert dashboard.channel_contributions[0].net_sales_share_pct == Decimal(
-        "66.6667"
+        "100.0000"
     )
-    assert dashboard.sku_performance[0].inventory_cover_days == 7
-    assert dashboard.sku_performance[0].forecast_4w_p50 != Decimal("999")
+    assert dashboard.sku_performance[0].sku_id == "SKU002"
+    assert dashboard.sku_performance[0].net_sales == Decimal("200")
+    sku001 = next(
+        row for row in dashboard.sku_performance if row.sku_id == "SKU001"
+    )
+    assert sku001.inventory_cover_days == 7
+    assert sku001.forecast_4w_p50 != Decimal("999")
     assert "sku_weighted_moving_average:v0.1" in dashboard.data_sources

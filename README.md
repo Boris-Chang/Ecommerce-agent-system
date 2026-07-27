@@ -13,7 +13,7 @@
 - 使用版本化 Python 模型生成渠道级 SKU 周销量预测
 - 运行每日或每周经营巡检，输出具体理由、统一指标语义和证据引用
 - 通过统一 Dashboard Service 组合 PostgreSQL 真实查询结果与显式标注的临时补充接口
-- 在经营总览、SKU 和库存页面按渠道、日期、粒度、仓库或 SKU 进行只读筛选
+- 在经营总览按单渠道查看当日与本周数据，并在 SKU 和库存页面按日期、粒度、仓库或 SKU 进行只读筛选
 
 ## 安全边界
 
@@ -109,7 +109,8 @@ SKU 销售和退款服务强制传入 `channel_account_id`，不会隐式执行�
 | `InventoryBalanceService` | 在库、预占、冻结、可售、在途数量 | SKU + 仓库 |
 | `InventoryRiskService` | 补货风险、积压风险 | SKU + 仓库 |
 | `SkuWeeklyForecastService` | 未来 1–52 周 P50/P90 销量预测 | 渠道账户 + SKU + 周 |
-| `OverviewDashboardService` | 组合销售、退款、库存和临时补充指标 | 多渠道 + 查询周期 + 币种 |
+| `OrderSummaryService` | 按渠道、业务日期和币种统计非取消订单数 | 渠道账户 + 日期范围 + 币种 |
+| `OverviewDashboardService` | 组合单渠道当日/本周销售、真实订单、退款、库存和临时补充指标 | 渠道账户 + 当日/本周 + 币种 |
 | `SkuDashboardService` | 组合 SKU 销售、退款、库存覆盖和目录补充指标 | 渠道账户 + SKU + 日/周 |
 | `InventoryDashboardService` | 组合库存余额、覆盖风险和临时决策指标 | SKU + 仓库 |
 
@@ -121,6 +122,7 @@ from application.services import (
     InventoryBalanceService,
     InventoryDashboardService,
     InventoryRiskService,
+    OrderSummaryService,
     OverviewDashboardService,
     SkuDashboardService,
     SkuRefundService,
@@ -262,7 +264,7 @@ DEEPSEEK_API_KEY=your-deepseek-api-key
 
 | 路由 | 页面能力 |
 | --- | --- |
-| `/overview` | 多渠道经营总览、周期对比、渠道贡献、SKU 表现、库存风险和经营洞察 |
+| `/overview` | 单渠道经营总览、当日/本周指标、SKU 表现、库存风险和经营洞察 |
 | `/sales` | 按渠道、日期、日/周粒度和 SKU 关键词查看销量、净销售额、退款率、库存覆盖及展开明细 |
 | `/sales/channels` | 各渠道在同一币种内的销量占比和净销售额占比 |
 | `/inventory` | 按仓库和 SKU 查看库存组成、在途数量、库存覆盖、补货及积压风险 |
@@ -292,7 +294,7 @@ WEB_OVERVIEW_QUERY_LIMIT=10000
 查询参数示例：
 
 ```text
-/overview?channel_account_id=CA_SHOPIFY_US&channel_account_id=CA_AMAZON_US&start_date=2026-07-01&end_date=2026-07-31
+/overview?channel_account_id=CA_AMAZON_US
 /sales?channel_account_id=CA_AMAZON_US&start_date=2026-07-01&end_date=2026-07-31&grain=weekly&search=SKU001
 /inventory?warehouse_id=WH_US_WEST&search=SKU001
 /sales/weekly?channel_account_id=CA_AMAZON_US
@@ -344,7 +346,7 @@ Presenter 生成的 ViewModel，不执行 SQL 或业务指标计算。
 
 | 页面 | 真实数据库链路 |
 | --- | --- |
-| `/overview` | `OverviewDashboardService → Sales/Refund/Inventory Repository → analytics.v_sku_daily_sales、sales.refunds/refund_lines/order_lines/orders、inventory.inventory_balances、analytics.v_inventory_cover` |
+| `/overview` | `OverviewDashboardService → Sales/Order/Refund/Inventory Repository → analytics.v_sku_daily_sales、sales.orders、sales.refunds/refund_lines/order_lines、inventory.inventory_balances、analytics.v_inventory_cover` |
 | `/sales` | `SkuDashboardService → Sales/Refund/Inventory Repository → analytics.v_sku_daily_sales、退款业务表、analytics.v_inventory_cover` |
 | `/sales/weekly` | `SkuSalesService → PostgresSalesAnalyticsRepository → analytics.v_sku_daily_sales` |
 | `/sales/refunds` | `SkuRefundService → PostgresSkuRefundRepository → sales.refunds/refund_lines/order_lines/orders` |
@@ -360,7 +362,7 @@ Repository：
 
 | 页面 | 临时补充字段 | `data_source` |
 | --- | --- | --- |
-| `/overview` | 估算订单数、毛利贡献权重、四周预测展示值和最多三条经营洞察 | `fixed_overview_supplement_v1` |
+| `/overview` | 毛利贡献权重、四周预测展示值和最多三条经营洞察；订单数已由 `sales.orders` 实时查询 | `fixed_overview_supplement_v1` |
 | `/sales` | 在售 SKU 总数和滞销 SKU 数量 | `fixed_sku_catalog_metrics_v1` |
 | `/inventory` | 库存金额、预计缺货损失、积压资金、建议补货数量 | `fixed_inventory_decision_metrics_v1` |
 | `/agent-analysis` GET 预览及复核区 | 预览结论、审核状态和建议动作；POST 刷新后的巡检结论与证据来自真实 Agent 调用，但复核元数据仍由固定 Provider 补充 | `fixed_inspection_review_workflow_v1` |
